@@ -11,7 +11,7 @@ import math
 class SDAutoencoder:
     """A stacked denoising autocoder implementation"""
 
-    def __init__(dimensions):
+    def __init__(self, dimensions):
         """
         dimensions (list): The number of neurons for each layer of the autoencoder. Ex: [784, 512, 256, 64]. The first item in the list
         should be the number of features in the input. The last item in
@@ -22,9 +22,9 @@ class SDAutoencoder:
         self.z, \
         self.y, \
         self.corrupt_prob, \
-        self.cost = _build()
+        self.cost = self._build()
 
-    def _build():
+    def _build(self):
         x = tf.placeholder(tf.float32, [None, self.dimensions[0]], name="x")
 
         # Probability of corrupting the input:
@@ -34,17 +34,17 @@ class SDAutoencoder:
         current_input = corrupt(x) * corrupt_prob + x * (1 - corrupt_prob)
 
         # Build the encoder and the latent representation
-        encoder, z = _build_encoder(current_input)
+        encoder, z = self._build_encoder(current_input)
 
         # Reconstructed input
         current_input = z
-        y = _decode(current_input, encoder)
+        y = self._decode(current_input, encoder)
 
         # Cost function measures pixel-wise difference
         cost = tf.sqrt(tf.reduce_mean(tf.square(y - x)))
         return x, z, y, corrupt_prob, cost
 
-    def _build_encoder(input_tensor):
+    def _build_encoder(self, input_tensor):
         """Builds the encoder based on a given input and `dimensions`
 
         input (Tensor): the input Tensor
@@ -67,7 +67,7 @@ class SDAutoencoder:
             input_tensor = output
         return encoder, output
 
-    def _decode(encoded_tensor, encoder):
+    def _decode(self, encoded_tensor, encoder):
         """Decodes the encoded_tensor by reversing operations using
         a reversed incoder
 
@@ -87,25 +87,25 @@ class SDAutoencoder:
             encoded_tensor = output
         return output
 
-    """
-    ########################
-    ### HELPER FUNCTIONS ###
-    ########################
-    """
-    def corrupt(x):
-        """Takes an input tensor and corrupts half of the values uniformly by zeroing them.
+"""
+########################
+### HELPER FUNCTIONS ###
+########################
+"""
+def corrupt(x):
+    """Takes an input tensor and corrupts half of the values uniformly by zeroing them.
 
-        x (Tensor): input to corrupt
-        returns: (Tensor) input with 50 percent of values corrupted
-        """
-        corruption = tf.cast(tf.random_uniform(
-            shape=tf.shape(x),
-            minval=0,
-            maxval=2,
-            dtype=tf.int32
-        ), tf.float32)
+    x (Tensor): input to corrupt
+    returns: (Tensor) input with 50 percent of values corrupted
+    """
+    corruption = tf.cast(tf.random_uniform(
+        shape=tf.shape(x),
+        minval=0,
+        maxval=2,
+        dtype=tf.int32
+    ), tf.float32)
 
-        return tf.mul(x, corruption)
+    return tf.mul(x, corruption)
 
 def main():
     s = SDAutoencoder([784, 256, 128, 64])
