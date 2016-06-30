@@ -39,3 +39,10 @@ luac.out
 *.x86_64
 *.hex
 
+# Exclude RData
+.RData
+.Rhistory
+
+# Exclude MNIST stuff
+MNIST_data
+run_data
