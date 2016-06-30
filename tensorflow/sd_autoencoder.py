@@ -106,3 +106,11 @@ class SDAutoencoder:
         ), tf.float32)
 
         return tf.mul(x, corruption)
+
+def main():
+    s = SDAutoencoder([784, 256, 128, 64])
+    print(vars(s))
+    print(dir(s))
+
+if __name__ == "__main__":
+    main()
