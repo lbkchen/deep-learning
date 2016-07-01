@@ -54,7 +54,6 @@ class SDAutoencoder:
 
     def _build(self):
         x = tf.placeholder(tf.float32, [None, self.dimensions[0]], name="x")
-
         # Probability of corrupting the input:
             # 1 for training
             # 0 for testing/production
