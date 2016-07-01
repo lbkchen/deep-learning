@@ -122,6 +122,8 @@ class SDAutoencoder:
 def test_mnist(dimensions):
     # Import and read MNIST data
     import tensorflow.examples.tutorials.mnist.input_data as input_data
+    import matplotlib.pyplot as plt
+
     mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
     mean_img = np.mean(mnist.train.images, axis=0)
 
@@ -132,6 +134,9 @@ def test_mnist(dimensions):
     learning_rate = 1e-4
     optimizer = tf.train.AdamOptimizer(learning_rate).minimize(ae.cost)
 
+    # Setup accuracy model
+    # is_correct = tf.equal()
+
     # Initialize the default session graph
     sess = tf.Session()
     sess.run(tf.initialize_all_variables())
@@ -141,13 +146,31 @@ def test_mnist(dimensions):
     n_epochs = 10
 
     for epoch_i in range(n_epochs):
-        print(mnist.train.num_examples)
         for batch_i in range(mnist.train.num_examples // batch_size):
             batch_xs, _ = mnist.train.next_batch(batch_size)
             train = np.array([img - mean_img for img in batch_xs])
             feed = {ae.x: train, ae.corrupt_prob: [1.0]}
             sess.run(optimizer, feed_dict=feed)
+
+            if batch_i % 100 == 0:
+                pass
         print(epoch_i, sess.run(ae.cost, feed_dict=feed))
+
+    # Plotting
+    n_examples = 15
+    test_xs, _ = mnist.test.next_batch(n_examples)
+    test_xs_norm = np.array([img - mean_img for img in test_xs])
+    recon = sess.run(ae.y, feed_dict={
+        ae.x: test_xs_norm, ae.corrupt_prob: [0.0]})
+    fig, axs = plt.subplots(2, n_examples, figsize=(10, 2))
+    for example_i in range(n_examples):
+        axs[0][example_i].imshow(
+            np.reshape(test_xs[example_i, :], (28, 28)))
+        axs[1][example_i].imshow(
+            np.reshape([recon[example_i, :] + mean_img], (28, 28)))
+    fig.show()
+    plt.draw()
+    plt.waitforbuttonpress()
 
 """
 ########################
