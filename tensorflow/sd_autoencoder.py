@@ -7,6 +7,32 @@ Ken Chen
 import tensorflow as tf
 import numpy as np
 import math
+import time
+from functools import wraps
+
+"""
+##################
+### DECORATORS ###
+##################
+"""
+
+def stopwatch(f):
+    """Simple decorator that prints the execution time of a function"""
+    @wraps(f)
+    def wrapped(*args):
+        start_time = time.time()
+        result = f(*args)
+        elapsed_time = time.time() - start_time
+        print("Total time elapsed for execution of %s:" %str(f), elapsed_time)
+        return result
+
+    return wrapped
+
+"""
+#####################################
+### STACKED DENOISING AUTOENCODER ###
+#####################################
+"""
 
 class SDAutoencoder:
     """A stacked denoising autocoder implementation"""
@@ -42,6 +68,7 @@ class SDAutoencoder:
 
         # Cost function measures pixel-wise difference
         cost = tf.sqrt(tf.reduce_mean(tf.square(y - x)))
+
         return x, z, y, corrupt_prob, cost
 
     def _build_encoder(self, input_tensor):
@@ -65,6 +92,7 @@ class SDAutoencoder:
             encoder.append(W)
             output = tf.nn.tanh(tf.matmul(input_tensor, W) + b)
             input_tensor = output
+
         return encoder, output
 
     def _decode(self, encoded_tensor, encoder):
@@ -85,8 +113,10 @@ class SDAutoencoder:
             b = tf.Variable(tf.zeros([n_output]))
             output = tf.nn.tanh(tf.matmul(encoded_tensor, W) + b)
             encoded_tensor = output
+
         return output
 
+@stopwatch
 def test_mnist(dimensions):
     # Import and read MNIST data
     import tensorflow.examples.tutorials.mnist.input_data as input_data
@@ -106,7 +136,7 @@ def test_mnist(dimensions):
 
     # Set batch and epoch size
     batch_size = 50
-    n_epochs = 1000
+    n_epochs = 10
 
     for epoch_i in range(n_epochs):
         for batch_i in range(mnist.train.num_examples // batch_size):
@@ -115,11 +145,13 @@ def test_mnist(dimensions):
             feed = {ae.x: train, ae.corrupt_prob: [1.0]}
             sess.run(optimizer, feed_dict=feed)
         print(epoch_i, sess.run(ae.cost, feed_dict=feed))
+
 """
 ########################
 ### HELPER FUNCTIONS ###
 ########################
 """
+
 def corrupt(x):
     """Takes an input tensor and corrupts half of the values uniformly by zeroing them.
 
