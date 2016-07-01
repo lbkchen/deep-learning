@@ -39,9 +39,11 @@ class SDAutoencoder:
 
     def __init__(self, dimensions):
         """
-        dimensions (list): The number of neurons for each layer of the autoencoder. Ex: [784, 512, 256, 64]. The first item in the list
-        should be the number of features in the input. The last item in
-        the list should be the number of features in the output.
+        dimensions (list): The number of neurons for each layer of
+        the autoencoder. Ex: [784, 512, 256, 64]. The first item
+        in the list should be the number of features in the input.
+        The last item in the list should be the number of features
+        in the output.
         """
         self.dimensions = dimensions
         self.x, \
@@ -123,7 +125,7 @@ def test_mnist(dimensions):
     mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
     mean_img = np.mean(mnist.train.images, axis=0)
 
-    # Create an SDA with 3 layers
+    # Create an SDA with dimensions.length() - 1 layers
     ae = SDAutoencoder(dimensions=dimensions)
 
     # Create an Adam optimizer for gradient descent
@@ -139,6 +141,7 @@ def test_mnist(dimensions):
     n_epochs = 10
 
     for epoch_i in range(n_epochs):
+        print(mnist.train.num_examples)
         for batch_i in range(mnist.train.num_examples // batch_size):
             batch_xs, _ = mnist.train.next_batch(batch_size)
             train = np.array([img - mean_img for img in batch_xs])
