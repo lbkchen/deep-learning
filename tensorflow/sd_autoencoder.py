@@ -87,6 +87,34 @@ class SDAutoencoder:
             encoded_tensor = output
         return output
 
+def test_mnist(dimensions):
+    # Import and read MNIST data
+    import tensorflow.examples.tutorials.mnist.input_data as input_data
+    mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
+    mean_img = np.mean(mnist.train.images, axis=0)
+
+    # Create an SDA with 3 layers
+    ae = SDAutoencoder(dimensions=dimensions)
+
+    # Create an Adam optimizer for gradient descent
+    learning_rate = 1e-4
+    optimizer = tf.train.AdamOptimizer(learning_rate).minimize(ae.cost)
+
+    # Initialize the default session graph
+    sess = tf.Session()
+    sess.run(tf.initialize_all_variables())
+
+    # Set batch and epoch size
+    batch_size = 50
+    n_epochs = 1000
+
+    for epoch_i in range(n_epochs):
+        for batch_i in range(mnist.train.num_examples // batch_size):
+            batch_xs, _ = mnist.train.next_batch(batch_size)
+            train = np.array([img - mean_img for img in batch_xs])
+            feed = {ae.x: train, ae.corrupt_prob: [1.0]}
+            sess.run(optimizer, feed_dict=feed)
+        print(epoch_i, sess.run(ae.cost, feed_dict=feed))
 """
 ########################
 ### HELPER FUNCTIONS ###
@@ -109,8 +137,7 @@ def corrupt(x):
 
 def main():
     s = SDAutoencoder([784, 256, 128, 64])
-    print(vars(s))
-    print(dir(s))
+    test_mnist([28 * 28, 512, 256, 64])
 
 if __name__ == "__main__":
     main()
