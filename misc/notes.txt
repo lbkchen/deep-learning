@@ -1,0 +1,6 @@
+1. Generate SAM Table
+2. Split table into 3 parts: testing, calibration, blind test
+3. Pre-processing/feature reduction by deep learning
+4. Training using 1/3 of data, get mathematical model and score for each patient
+5. With the score, use the calibration to get ppv probability with the second 1/3 of data
+6. Using the last 1/3 of data, generate the Berger table
