@@ -46,3 +46,6 @@ luac.out
 # Exclude MNIST stuff
 MNIST_data
 run_data
+
+# Exclude PyCharm
+.idea
