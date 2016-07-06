@@ -10,6 +10,7 @@ import math
 import time
 from functools import wraps
 
+
 """
 ##################
 ### DECORATORS ###
@@ -29,11 +30,32 @@ def stopwatch(f):
 
     return wrapped
 
+
 """
 ######################
 ### HELPER CLASSES ###
 ######################
 """
+
+
+class SoftmaxLayer(object):
+
+    def __init__(self, input_tensor, n_input, n_output):
+        """A logistic regression layer described by a weight matrix W and a bias b.
+
+        :param input_tensor: The input tensor.
+        :param n_input: The dimension of the input.
+        :param n_output: The dimension of the output labels.
+        """
+
+        self.W = tf.Variable(tf.zeros([n_input, n_output], tf.float32), name="W")
+        self.b = tf.Variable(tf.zeros([n_output]), name="b")
+
+        self.p_y_given_x = tf.nn.softmax(tf.matmul(input_tensor, self.W) + self.b)
+
+        self.y_pred = tf.argmax(self.p_y_given_x, 1)
+        self.params = [self.W, self.b]
+        self.input = input_tensor
 
 
 class HiddenLayer(object):
@@ -57,9 +79,8 @@ class HiddenLayer(object):
             W = tf.Variable(tf.random_uniform(
                 shape=[n_input, n_output],
                 minval=-np.sqrt(6. / (n_input + n_output)),
-                maxval=np.sqrt(6. / (n_input + n_output)),
-                name="W"
-            ))
+                maxval=np.sqrt(6. / (n_input + n_output))
+            ), name="W")
             W = W * 4 if act == tf.nn.sigmoid else W
 
         if b is None:
@@ -100,9 +121,8 @@ class DAutoencoder(object):
             W = tf.Variable(tf.random_uniform(
                 shape=[n_visible, n_hidden],
                 minval=-np.sqrt(6. / (n_visible + n_hidden)),
-                maxval=np.sqrt(6. / (n_visible + n_hidden)),
-                name="W"
-            ))
+                maxval=np.sqrt(6. / (n_visible + n_hidden))
+            ), name="W")
 
         if not bvis:
             bvis = tf.Variable(tf.zeros([n_visible]))
@@ -176,6 +196,7 @@ class DAutoencoder(object):
         ]
 
         return cross_entropy, updates
+
 
 """
 #####################################
