@@ -1,5 +1,5 @@
 """
-Denoising Autoencoders example with MNIST
+Stacked Denoising Autoencoder implementation
 
 Ken Chen
 """
@@ -20,6 +20,7 @@ from functools import wraps
 
 def stopwatch(f):
     """Simple decorator that prints the execution time of a function."""
+
     @wraps(f)
     def wrapped(*args):
         start_time = time.time()
@@ -148,6 +149,7 @@ class DAutoencoder(object):
         :param corruption_level: Between 0 and 1, the proportion of input to corrupt.
         :return: The corrupted input.
         """
+
         corruption = tf.cast(tf.random_uniform(
             shape=tf.shape(input_tensor),
             minval=0,
@@ -248,3 +250,9 @@ class SDAutoencoder(object):
             self.da_layers.append(da_layer)
 
         #FIXME Add softmax regression layer on top
+        self.log_layer = SoftmaxLayer(input=self.act_layers[-1].output,
+                                      n_input=hidden_layers_sizes[-1],
+                                      n_output=n_output)
+        self.params.extend(self.log_layer.params)
+
+        self.finetune_cost = self.log_layer
