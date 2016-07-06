@@ -201,7 +201,7 @@ class SDAutoencoder(object):
         """
 
         self.act_layers = []
-        self.dA_layers = []
+        self.da_layers = []
         self.params = []
         self.n_layers = len(hidden_layers_sizes)
 
@@ -214,8 +214,16 @@ class SDAutoencoder(object):
             input_dim = n_input if i == 0 else hidden_layers_sizes[i - 1]
             layer_input = self.x if i == 0 else self.act_layers[-1].output
 
-            layer = HiddenLayer(layer_input, input_dim, hidden_layers_sizes[i], act=act)
-            self.act_layers.append(layer)
-            self.params.extend(layer.params)
+            act_layer = HiddenLayer(layer_input, input_dim, hidden_layers_sizes[i], act=act)
+            self.act_layers.append(act_layer)
+            self.params.extend(act_layer.params)
 
-            # dA_layer = dA FIXME: Need to implement denoising autoencoder
+            da_layer = DAutoencoder(n_visible=input_dim,
+                                    n_hidden=hidden_layers_sizes[i],
+                                    input_tensor=layer_input,
+                                    W=act_layer.W,
+                                    bhid=act_layer.b)
+
+            self.da_layers.append(da_layer)
+
+        #FIXME Add softmax regression layer on top
