@@ -43,6 +43,10 @@ unitScale <- function(v) {
   return((v - min(v)) / (max(v) - min(v)))
 }
 
+# Returns whether a vector should be scaled in the SAM
+shouldScale <- function(v) {
+  
+}
 # Returns whether a vector has >= threshold proportion of entries 0
 isSparse <- function(v, threshold) {
   propZero <- length(v[v==0]) / length(v)
@@ -98,10 +102,14 @@ write.csv(SummaryOfNonBinary, "data/summary_of_non_binary.csv")
 # PREPROCESS DATA #
 ###################
 
+# Split data into labels and features
+Sam.ys <- Sam[,1:3]
+Sam.xs <- Sam[,4:ncol(Sam)]
+
 preprocess <- function(df) {
   df <- df %>%
     mutate_if(isDense90, standardize) %>%
     mutate_if(function(v){notOnlyBinary(v) & !isDense90(v)}, unitScale)
 }
 
-Sam <- preprocess(Sam)
+Sam.xs <- preprocess(Sam.xs)
