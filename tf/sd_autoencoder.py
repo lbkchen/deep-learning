@@ -141,7 +141,7 @@ class DAutoencoder(object):
 
         self.params = [self.W, self.b, self.b_prime]
 
-    def get_corrupted_input(self, input_tensor, corruption_level):
+    def get_corrupted_input(self, input_tensor, corruption_level): #FIXME: Bugged multiplication: must be only 1s
         """Keeps `1-corruption_level` proportion of entries of inputs, and zeros
         a random subset of proportion `corruption_level` from the input.
 
