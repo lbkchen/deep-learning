@@ -62,6 +62,10 @@ isDense90 <- function(v) {
   return(!isSparse(v, 0.10))
 }
 
+isNotDenseOrBinary <- function(v) {
+    return(notOnlyBinary(v) && !isDense90(v))
+}
+
 ##############################
 # GET INFORMATION ABOUT DATA #
 ##############################
