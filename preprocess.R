@@ -2,7 +2,7 @@ library(rlist)
 library(mosaic)
 library(dplyr)
 
-Sam <- read.file("data/sssSAMTablePart01.csv")
+Sam <- read.file("data/ssSAMTablePart01.csv")
 
 ####################
 # HELPER FUNCTIONS #
