@@ -45,7 +45,7 @@ unitScale <- function(v) {
 
 # Returns whether a vector should be scaled in the SAM
 shouldScale <- function(v) {
-  
+
 }
 # Returns whether a vector has >= threshold proportion of entries 0
 isSparse <- function(v, threshold) {
@@ -86,13 +86,13 @@ print(paste("Num cols with non-binary values:", numColsWith(Sam, notOnlyBinary))
 SamNonBinary <- Sam %>% select_if(notOnlyBinary)
 
 SummaryOfNonBinary <- data.frame(
-  name=names(SamNonBinary), 
-  mean=SamNonBinary %>% sapply(mean), 
-  sd=SamNonBinary %>% sapply(sd), 
-  min=SamNonBinary %>% sapply(min), 
-  q1=SamNonBinary %>% sapply(function(v){quantile(v)["25%"]}), 
+  name=names(SamNonBinary),
+  mean=SamNonBinary %>% sapply(mean),
+  sd=SamNonBinary %>% sapply(sd),
+  min=SamNonBinary %>% sapply(min),
+  q1=SamNonBinary %>% sapply(function(v){quantile(v)["25%"]}),
   median=SamNonBinary %>% sapply(median),
-  q3=SamNonBinary %>% sapply(function(v){quantile(v)["75%"]}), 
+  q3=SamNonBinary %>% sapply(function(v){quantile(v)["75%"]}),
   max=SamNonBinary %>% sapply(max)
 )
 
@@ -106,11 +106,17 @@ write.csv(SummaryOfNonBinary, "data/summary_of_non_binary.csv")
 Sam.ys <- Sam[,1:3]
 Sam.xs <- Sam[,4:ncol(Sam)]
 
-preprocess <- function(df) {
-  df <- df %>%
-    mutate_if(isDense90, standardize) %>%
-    mutate_if(function(v){notOnlyBinary(v) & !isDense90(v)}, unitScale)
-    return(df)
-}
+# preprocess <- function(df) {
+#   df <- df %>%
+#     mutate_if(isDense90, standardize) %>%
+#     mutate_if(function(v){notOnlyBinary(v) & !isDense90(v)}, unitScale)
+#     return(df)
+# }
+
+Sam.xs <- Sam.xs %>%
+  mutate_if(isDense90, standardize) %>%
+  mutate_if(function(v){notOnlyBinary(v) & !isDense90(v)}, unitScale)
 
 Sam.xs <- preprocess(Sam.xs)
+write.csv(Sam.xs, "data/SAMX.csv")
+write.csv(Sam.ys, "data/SAMY.csv")
