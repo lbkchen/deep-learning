@@ -42,7 +42,7 @@ luac.out
 # Exclude Data
 .RData
 .Rhistory
-.Rout
+*.Rout
 data
 
 # Exclude MNIST stuff

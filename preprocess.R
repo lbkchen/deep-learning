@@ -2,7 +2,7 @@ library(rlist)
 library(mosaic)
 library(dplyr)
 
-Sam <- read.file("data/ssSAMTablePart01.csv")
+Sam <- read.file("data/sssSAMTablePart01.csv")
 
 ####################
 # HELPER FUNCTIONS #
@@ -117,10 +117,10 @@ Sam.xs <- Sam[,4:ncol(Sam)]
 #     return(df)
 # }
 
-Sam.xs <- Sam.xs %>%
+Sam.xs %>%
   mutate_if(isDense90, standardize) %>%
-  mutate_if(function(v){notOnlyBinary(v) & !isDense90(v)}, unitScale)
+  mutate_if(isNotDenseOrBinary, unitScale) %>%
+  write.csv("data/SAMX.csv")
 
-Sam.xs <- preprocess(Sam.xs)
-write.csv(Sam.xs, "data/SAMX.csv")
+# write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
 write.csv(Sam.ys, "data/SAMY.csv")
