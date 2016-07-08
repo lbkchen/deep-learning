@@ -19,9 +19,9 @@ hasAllNumeric <- function(v) {
   return(!anyNA(v) & is.numeric(v))
 }
 
-# Takes a boolean return function f and returns the number of columns in df
+# Takes a boolean return function f and returns the number of columns in dtf
 # with f true
-numColsWith <- function(df, f) {
+numColsWith <- function(dtf, f) {
   return(Sam %>% sapply(f) %>% sum())
 }
 
@@ -64,6 +64,21 @@ isDense90 <- function(v) {
 
 isNotDenseOrBinary <- function(v) {
     return(notOnlyBinary(v) && !isDense90(v))
+}
+
+# Performs pre-processing steps on vector based on data format
+preprocess <- function(v) {
+  if (isDense90(v)) {
+    v <- standardize(v)
+  }
+  if (isNotDenseOrBinary(v)) {
+    v <- unitScale(v)
+  }
+  return(v)
+}
+
+scaleAndNormalize <- function(dtf) {
+  return(dtf %>% sapply(preprocess))
 }
 
 ##############################
@@ -110,16 +125,20 @@ write.csv(SummaryOfNonBinary, "data/summary_of_non_binary.csv")
 Sam.ys <- Sam[,1:3]
 Sam.xs <- Sam[,4:ncol(Sam)]
 
-# preprocess <- function(df) {
-#   df <- df %>%
+# preprocess <- function(dtf) {
+#   dtf <- dtf %>%
 #     mutate_if(isDense90, standardize) %>%
 #     mutate_if(function(v){notOnlyBinary(v) & !isDense90(v)}, unitScale)
-#     return(df)
+#     return(dtf)
 # }
 
+# Sam.xs %>%
+#   mutate_if(isDense90, standardize) %>%
+#   mutate_if(isNotDenseOrBinary, unitScale) %>%
+#   write.csv("data/SAMX.csv")
+
 Sam.xs %>%
-  mutate_if(isDense90, standardize) %>%
-  mutate_if(isNotDenseOrBinary, unitScale) %>%
+  scaleAndNormalize() %>%
   write.csv("data/SAMX.csv")
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
