@@ -2,7 +2,7 @@ library(rlist)
 library(mosaic)
 library(dplyr)
 
-Sam <- read.file("data/sSAMTablePart01.csv")
+Sam <- read.file("data/ssSAMTablePart01.csv")
 
 ####################
 # HELPER FUNCTIONS #
@@ -110,6 +110,7 @@ preprocess <- function(df) {
   df <- df %>%
     mutate_if(isDense90, standardize) %>%
     mutate_if(function(v){notOnlyBinary(v) & !isDense90(v)}, unitScale)
+    return(df)
 }
 
 Sam.xs <- preprocess(Sam.xs)
