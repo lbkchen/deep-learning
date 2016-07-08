@@ -2,7 +2,7 @@ library(rlist)
 library(mosaic)
 library(dplyr)
 
-Sam <- read.file("data/ssSAMTablePart01.csv")
+Sam <- read.file("data/sSAMTablePart01.csv")
 
 ####################
 # HELPER FUNCTIONS #
@@ -122,8 +122,8 @@ write.csv(SummaryOfNonBinary, "data/summary_of_non_binary.csv")
 ###################
 
 # Split data into labels and features
-Sam.ys <- Sam[,1:3]
-Sam.xs <- Sam[,4:ncol(Sam)]
+Sam.ys <- Sam[1:3]
+Sam.xs <- Sam[4:ncol(Sam)]
 
 # preprocess <- function(dtf) {
 #   dtf <- dtf %>%
