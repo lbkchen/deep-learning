@@ -78,7 +78,7 @@ preprocess <- function(v) {
 }
 
 scaleAndNormalize <- function(dtf) {
-  return(dtf %>% sapply(preprocess))
+  return(dtf %>% vapply(preprocess, numeric(nrow(dtf))))
 }
 
 ##############################
@@ -87,32 +87,32 @@ scaleAndNormalize <- function(dtf) {
 
 Sam <- Sam %>% select_if(hasAllNumeric)
 
-print(paste("Num cols with only numerical entries:", numColsWith(Sam, function(v){
-  is.numeric(v)
-})))
-
-print(paste("Num cols with only zero entries:", numColsWith(Sam, function(v){
-  mean(v) == 0
-})))
-
-print(paste("Num cols with negative entries:", numColsWith(Sam, function(v){
-  any(v < 0)
-})))
-
-print(paste("Num cols with binary values:", numColsWith(Sam, onlyBinary)))
-print(paste("Num cols with non-binary values:", numColsWith(Sam, notOnlyBinary)))
+# print(paste("Num cols with only numerical entries:", numColsWith(Sam, function(v){
+#   is.numeric(v)
+# })))
+# 
+# print(paste("Num cols with only zero entries:", numColsWith(Sam, function(v){
+#   mean(v) == 0
+# })))
+# 
+# print(paste("Num cols with negative entries:", numColsWith(Sam, function(v){
+#   any(v < 0)
+# })))
+# 
+# print(paste("Num cols with binary values:", numColsWith(Sam, onlyBinary)))
+# print(paste("Num cols with non-binary values:", numColsWith(Sam, notOnlyBinary)))
 
 SamNonBinary <- Sam %>% select_if(notOnlyBinary)
 
 SummaryOfNonBinary <- data.frame(
   name=names(SamNonBinary),
-  mean=SamNonBinary %>% sapply(mean),
-  sd=SamNonBinary %>% sapply(sd),
-  min=SamNonBinary %>% sapply(min),
-  q1=SamNonBinary %>% sapply(function(v){quantile(v)["25%"]}),
-  median=SamNonBinary %>% sapply(median),
-  q3=SamNonBinary %>% sapply(function(v){quantile(v)["75%"]}),
-  max=SamNonBinary %>% sapply(max)
+  mean=SamNonBinary %>% vapply(mean, numeric(1)),
+  sd=SamNonBinary %>% vapply(sd, numeric(1)),
+  min=SamNonBinary %>% vapply(min, numeric(1)),
+  q1=SamNonBinary %>% vapply(function(v){quantile(v)["25%"]}, numeric(1)),
+  median=SamNonBinary %>% vapply(median, numeric(1)),
+  q3=SamNonBinary %>% vapply(function(v){quantile(v)["75%"]}, numeric(1)),
+  max=SamNonBinary %>% vapply(max, numeric(1))
 )
 
 write.csv(SummaryOfNonBinary, "data/summary_of_non_binary.csv")
