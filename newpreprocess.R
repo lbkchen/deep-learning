@@ -1,6 +1,7 @@
 library(data.table)
+library(dplyr)
 
-Sam <- fread("data/sSAMTablePart01.csv")
+Sam <- fread("data/ssSAMTablePart01.csv")
 
 ####################
 # HELPER FUNCTIONS #

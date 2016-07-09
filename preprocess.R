@@ -2,7 +2,8 @@ library(rlist)
 library(mosaic)
 library(dplyr)
 
-Sam <- read.file("data/sSAMTablePart01.csv")
+fileName <- "data/SAMPart01aa.csv"
+Sam <- read.file(fileName)
 
 ####################
 # HELPER FUNCTIONS #
@@ -139,7 +140,7 @@ Sam.xs <- Sam[4:ncol(Sam)]
 
 Sam.xs %>%
   scaleAndNormalize() %>%
-  write.csv("data/SAMX.csv")
+  write.csv("data/SAMXaa.csv")
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
-write.csv(Sam.ys, "data/SAMY.csv")
+write.csv(Sam.ys, "data/SAMYaa.csv")
