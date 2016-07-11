@@ -2,7 +2,10 @@ library(rlist)
 library(mosaic)
 library(dplyr)
 
-fileName <- "data/SAMPart01aa.csv"
+args <- commandArgs(trailingOnly = TRUE)
+argID <- args[1]
+
+fileName <- paste0("data/SAMPart01", argID, ".csv")
 Sam <- read.file(fileName)
 
 ####################
@@ -116,7 +119,8 @@ SummaryOfNonBinary <- data.frame(
   max=SamNonBinary %>% vapply(max, numeric(1))
 )
 
-write.csv(SummaryOfNonBinary, "data/summary_of_non_binary.csv")
+summaryDest <- paste0("data/summaries/summary_of_non_binary", argID, ".csv")
+write.csv(SummaryOfNonBinary, summaryDest)
 
 ###################
 # PREPROCESS DATA #
@@ -140,7 +144,10 @@ Sam.xs <- Sam[4:ncol(Sam)]
 
 Sam.xs %>%
   scaleAndNormalize() %>%
-  write.csv("data/SAMXaa.csv")
+  write.csv(paste0("data/splits/SAMX", argID, ".csv"))
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
-write.csv(Sam.ys, "data/SAMYaa.csv")
+Sam.ys %>%
+  select(StatePatientID, IP_YTM) %>%
+  mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
+  write.csv(paste0("data/splits/SAMY", argID, ".csv"))
