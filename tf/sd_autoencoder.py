@@ -250,7 +250,7 @@ class SDAutoencoder(object):
             self.da_layers.append(da_layer)
 
         #FIXME Add softmax regression layer on top
-        self.log_layer = SoftmaxLayer(input=self.act_layers[-1].output,
+        self.log_layer = SoftmaxLayer(input_tensor=self.act_layers[-1].output,
                                       n_input=hidden_layers_sizes[-1],
                                       n_output=n_output)
         self.params.extend(self.log_layer.params)
