@@ -8,6 +8,7 @@ import tensorflow as tf
 import numpy as np
 import math
 import time
+import csv
 from functools import wraps
 from sklearn.preprocessing import MaxAbsScaler
 
@@ -22,6 +23,10 @@ from sklearn.preprocessing import MaxAbsScaler
 allowed_activations = ["sigmoid", "tanh", "relu", "softmax"]
 allowed_noises = [None, "gaussian", "mask"]
 allowed_losses = ["rmse", "cross-entropy"]
+
+xs_filepath = "../data/S01X.csv"
+ys_filepath = "../data/S01Y.csv"
+
 
 
 """
@@ -56,6 +61,25 @@ def get_batch(X, X_, size):
     a = np.random.choice(len(X), size, replace=False)
     return X[a], X_[a]
 
+def get_next_batch(filename, batch_size):
+    """Generator that gets the net batch of batch_size x or y values
+    from the given file.
+
+    :param filename:
+    :param criterion:
+    :return:
+    """
+    with open(filename, "rb") as file:
+        reader = csv.reader(file)
+        index = 0
+        this_batch = []
+        for row in reader:
+            this_batch.append(row)
+            index += 1
+
+            if index % batch_size == 0:
+                yield this_batch
+                this_batch = []
 
 """
 #####################################
@@ -196,24 +220,27 @@ class SDAutoencoder:
             return linear
 
 def main():
-    xs = np.genfromtxt("../data/S01X.csv", delimiter=",")
-    ys = np.genfromtxt("../data/S01Y.csv", delimiter=",")
-    half = len(xs) // 2
-
-    train_x = MaxAbsScaler().fit_transform(xs[:half, :])
-    train_y = ys[:half , :]
-    test_x = MaxAbsScaler().fit_transform(xs[half:, :])
-    test_y = ys[half:, :]
-
-    model = SDAutoencoder(dims=[4000, 2000],
-                          activations=["sigmoid", "sigmoid"],
-                          epoch=[300, 300],
-                          loss="rmse",
-                          lr=0.001,
-                          batch_size=1500,
-                          print_step=50)
-
-    xx = model.fit_transform(np.r_[train_x, test_x])
+    # xs = np.genfromtxt("../data/S01X.csv", delimiter=",")
+    # ys = np.genfromtxt("../data/S01Y.csv", delimiter=",")
+    # half = len(xs) // 2
+    #
+    # train_x = MaxAbsScaler().fit_transform(xs[:half, :])
+    # train_y = ys[:half , :]
+    # test_x = MaxAbsScaler().fit_transform(xs[half:, :])
+    # test_y = ys[half:, :]
+    #
+    # model = SDAutoencoder(dims=[4000, 2000],
+    #                       activations=["sigmoid", "sigmoid"],
+    #                       epoch=[300, 300],
+    #                       loss="rmse",
+    #                       lr=0.001,
+    #                       batch_size=1500,
+    #                       print_step=50)
+    #
+    # xx = model.fit_transform(np.r_[train_x, test_x])
+    a = get_next_batch(ys_filepath, 25)
+    print(next(a))
+    print(next(a))
 
 if __name__ == "__main__":
     main()
