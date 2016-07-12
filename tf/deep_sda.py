@@ -9,6 +9,7 @@ import numpy as np
 import math
 import time
 from functools import wraps
+from sklearn.preprocessing import MaxAbsScaler
 
 
 """
@@ -45,10 +46,15 @@ def stopwatch(f):
 
 
 """
-######################
-### HELPER CLASSES ###
-######################
+##################################
+### HELPER CLASSES / FUNCTIONS ###
+##################################
 """
+
+
+def get_batch(X, X_, size):
+    a = np.random.choice(len(X), size, replace=False)
+    return X[a], X_[a]
 
 
 """
@@ -102,7 +108,7 @@ class SDAutoencoder:
             n = np.random.normal(0, 0.1, (len(x), len(x[0])))
             return x + n
         if "mask" in self.noise:
-            frac = float(self.noise.split("-")[1]) #FIXME Dont really get this
+            frac = float(self.noise.split("-")[1]) # Self.noise can have form ex. mask-0.4
             temp = np.copy(x)
             for i in temp:
                 n = np.random.choice(len(i), round(frac * len(i)), replace=False)
@@ -162,7 +168,7 @@ class SDAutoencoder:
             loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(decoded, x_))
         train_op = tf.train.AdamOptimizer(lr).minimize(loss)
 
-        sess.run(tf.initialize_all_tables())
+        sess.run(tf.initialize_all_variables())
 
         for i in range(epoch):
             b_x, b_x_ = None, None #FIXME add batch distribution system of data
@@ -188,3 +194,26 @@ class SDAutoencoder:
             return tf.nn.softmax(linear, name="encoded")
         else:
             return linear
+
+def main():
+    xs = np.genfromtxt("../data/SAMTablePart01X.csv", delimiter=",")
+    ys = np.genfromtxt("../data/SAMTablePart01Y.csv", delimiter=",")
+    half = len(xs) // 2
+
+    train_x = MaxAbsScaler().fit_transform(xs[:half, :])
+    train_y = ys[:half , :]
+    test_x = MaxAbsScaler().fit_transform(xs[half:, :])
+    test_y = ys[half:, :]
+
+    model = SDAutoencoder(dims=[4000, 2000],
+                          activations=["sigmoid", "sigmoid"],
+                          epoch=[300, 300],
+                          loss="rmse",
+                          lr=0.001,
+                          batch_size=1500,
+                          print_step=50)
+
+    xx = model.fit_transform(np.r_[train_x, test_x])
+
+if __name__ == "__main__":
+    main()
