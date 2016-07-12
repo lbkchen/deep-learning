@@ -5,7 +5,7 @@ library(dplyr)
 args <- commandArgs(trailingOnly = TRUE)
 argID <- args[1]
 
-fileName <- paste0("data/SAMPart01", argID, ".csv")
+fileName <- paste0("data/SAM01", argID, ".csv")
 Sam <- read.file(fileName)
 
 ####################
