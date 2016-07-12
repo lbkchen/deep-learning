@@ -69,7 +69,7 @@ def get_next_batch(filename, batch_size):
     :param criterion:
     :return:
     """
-    with open(filename, "rb") as file:
+    with open(filename, "rt") as file:
         reader = csv.reader(file)
         index = 0
         this_batch = []
