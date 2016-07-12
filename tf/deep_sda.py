@@ -133,3 +133,58 @@ class SDAutoencoder:
             layer = tf.matmul(x, weight) + bias
             x = self.activate(layer, a)
         return x.eval(session=sess)
+
+    def fit_transform(self, x):
+        self.fit(x)
+        return self.transform(x)
+
+    def run(self, data_x, data_x_, hidden_dim, activation, loss,
+            lr, print_step, epoch, batch_size=100):
+        input_dim = len(data_x[0])
+        sess = tf.Session()
+
+        x = tf.placeholder(dtype=tf.float32, shape=[None, input_dim], name="x")
+        x_ = tf.placeholder(dtype=tf.float32, shape=[None, input_dim], name="x_")
+
+        encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, hidden_dim], dtype=tf.float32)),
+                  "biases": tf.Variable(tf.truncated_normal([hidden_dim], dtype=tf.float32))}
+
+        decode = {"weights": tf.transpose(encode["weights"]),
+                  "biases": tf.Variable(tf.truncated_normal([input_dim], dtype=tf.float32))}
+
+        encoded = self.activate(tf.matmul(x, encode["weights"]) + encode["biases"], activation)
+        decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
+
+        # Reconstruction loss
+        if loss == "rmse":
+            loss = tf.sqrt(tf.reduce_mean(tf.square(tf.sub(x_, decoded))))
+        elif loss == "cross-entropy":
+            loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(decoded, x_))
+        train_op = tf.train.AdamOptimizer(lr).minimize(loss)
+
+        sess.run(tf.initialize_all_tables())
+
+        for i in range(epoch):
+            b_x, b_x_ = None, None #FIXME add batch distribution system of data
+            sess.run(train_op, feed_dict={x: b_x, x_: b_x_})
+            if (i + 1) % print_step == 0:
+                loss_value = sess.run(loss, feed_dict={x: data_x, x_: data_x_})
+                print("Epoch %d: global loss = %s" % (i, loss_value))
+
+        # debug
+        # print('Decoded', sess.run(decoded, feed_dict={x: self.data_x_})[0])
+        self.weights.append(sess.run(encode["weights"]))
+        self.biases.append(sess.run(encode["biases"]))
+        return sess.run(encoded, feed_dict={x: data_x_})
+
+    def activate(self, linear, name):
+        if name == "sigmoid":
+            return tf.nn.sigmoid(linear, name="encoded")
+        elif name == "tanh":
+            return tf.nn.tanh(linear, name="encoded")
+        elif name == "relu":
+            return tf.nn.relu(linear, name="encoded")
+        elif name == "softmax":
+            return tf.nn.softmax(linear, name="encoded")
+        else:
+            return linear
