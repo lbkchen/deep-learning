@@ -196,8 +196,8 @@ class SDAutoencoder:
             return linear
 
 def main():
-    xs = np.genfromtxt("../data/SAMTablePart01X.csv", delimiter=",")
-    ys = np.genfromtxt("../data/SAMTablePart01Y.csv", delimiter=",")
+    xs = np.genfromtxt("../data/S01X.csv", delimiter=",")
+    ys = np.genfromtxt("../data/S01Y.csv", delimiter=",")
     half = len(xs) // 2
 
     train_x = MaxAbsScaler().fit_transform(xs[:half, :])
