@@ -103,7 +103,7 @@ class SDAutoencoder:
 
     def __init__(self, dims, activations, epoch=1000, noise=None, loss="cross-entropy",
                  lr=0.0001, batch_size=100, print_step=50):
-        """Creates the autoencoder
+        """Creates the autoencoder with some parameters
 
         :param dims:
         :param activations:
@@ -190,7 +190,7 @@ class SDAutoencoder:
             loss = tf.sqrt(tf.reduce_mean(tf.square(tf.sub(x_, decoded))))
         elif loss == "cross-entropy":
             loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(decoded, x_))
-        train_op = tf.train.AdamOptimizer(lr).minimize(loss)
+        train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(loss)
 
         sess.run(tf.initialize_all_variables())
 
