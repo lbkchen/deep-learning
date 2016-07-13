@@ -44,7 +44,7 @@ def stopwatch(f):
         start_time = time.time()
         result = f(*args)
         elapsed_time = time.time() - start_time
-        print("Total time elapsed for execution of %s:" %f, elapsed_time)
+        print("Total seconds elapsed for execution of %s:" %f, elapsed_time)
         return result
 
     return wrapped
@@ -72,10 +72,14 @@ def get_next_batch(filename, batch_size):
     with open(filename, "rt") as file:
         reader = csv.reader(file)
         index = 0
+        max_index = len(reader) // 2
         this_batch = []
         for row in reader:
             this_batch.append(row)
             index += 1
+
+            if index > max_index:
+                break
 
             if index % batch_size == 0:
                 yield this_batch
