@@ -139,7 +139,7 @@ class SDAutoencoder:
 
         return tf.mul(tensor, corruption)
 
-    def train_layer(self, input_dim, output_dim, num_batches, act=tf.nn.sigmoid):
+    def train_layer(self, input_dim, output_dim, num_batches, batch_generator, act=tf.nn.sigmoid):
         sess = tf.Session()
 
         x_true = tf.placeholder(tf.float32, shape=[None, input_dim])
@@ -160,8 +160,15 @@ class SDAutoencoder:
         train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         sess.run(tf.initialize_all_variables())
 
+        generator = batch_generator()
         for i in range(num_batches):
-            batch_x_true =
+            batch_x_true = next(generator)
+            sess.run(train_op, feed_dict={x_true: batch_x_true})
+            if (i + 1) % self.print_step == 0:
+                loss_value = sess.run(loss, feed_dict={x_true: batch_x_true})
+                print("Global loss = %s" % (loss_value))
+
+        return sess.run(encode["weights"]), sess.run(encode["biases"]) # FIXME how about encoded input for next layer? write to file
 
     def get_loss(self, tensor_1, tensor_2):
         if self.loss == "rmse":
