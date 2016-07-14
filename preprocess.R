@@ -141,6 +141,9 @@ scaleAndNormalize <- function(dtf) {
 #     mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
 #     scaleAndNormalize()
 
+print(ncol(Sam))
+print(colnames(Sam))
+
 # Preprocess xs
 if (which.variable == "whole") {
     # Train set
