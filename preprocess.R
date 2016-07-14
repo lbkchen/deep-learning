@@ -8,7 +8,7 @@ argID <- args[1]
 which.variable <- args[2] # either x, y, or whole
 
 # fileName <- paste0("data/SAM01", argID, ".csv")
-filename <- argID
+fileName <- argID
 # Sam <- read.file(fileName)
 # train.set <- read.file("data/train.csv")
 # test.set <- read.file("data/test.csv")
