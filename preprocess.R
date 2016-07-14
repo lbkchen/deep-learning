@@ -145,16 +145,21 @@ print(ncol(Sam))
 print(colnames(Sam))
 
 # Preprocess xs
-if (which.variable == "whole") {
-    # Train set
-    Sam[StatePatientID %in% train.set$x,] %>%
-        write.csv("data/TrainSAM")
-    Sam[StatePatientID %in% test.set$x,] %>%
-        write.csv("data/TestSAM")
-}
+# if (which.variable == "whole") {
+#     # Train set
+#     Sam[StatePatientID %in% train.set$x,] %>%
+#         write.csv("data/TrainSAM")
+#     Sam[StatePatientID %in% test.set$x,] %>%
+#         write.csv("data/TestSAM")
+# }
+
+Sam[StatePatientID %in% train.set$x,] %>%
+    write.csv("data/TrainSAM")
+Sam[StatePatientID %in% test.set$x,] %>%
+    write.csv("data/TestSAM")
 
 if (which.variable == "x") {
-    
+
 }
 # Split data into labels and features
 # Sam.ys <- Sam[1:3]
