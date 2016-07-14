@@ -139,7 +139,17 @@ class SDAutoencoder:
 
         return tf.mul(tensor, corruption)
 
-    def train_layer(self, input_dim, output_dim, num_batches, batch_generator, act=tf.nn.sigmoid):
+    def write_data(self, data, filename):
+        """Writes data in data_tensor and appends to the end of filename in csv format
+
+        :param data: A 2-dimensional numpy array
+        :param filename: A string representing the save filepath
+        :return: None
+        """
+        with open(filename, "ab") as file:
+            np.savetxt(file, data, delimiter=",")
+
+    def pretrain_layer(self, input_dim, output_dim, num_batches, batch_generator, act=tf.nn.sigmoid):
         sess = tf.Session()
 
         x_true = tf.placeholder(tf.float32, shape=[None, input_dim])
@@ -166,7 +176,7 @@ class SDAutoencoder:
             sess.run(train_op, feed_dict={x_true: batch_x_true})
             if (i + 1) % self.print_step == 0:
                 loss_value = sess.run(loss, feed_dict={x_true: batch_x_true})
-                print("Global loss = %s" % (loss_value))
+                print("Batch loss = %s" % loss_value)
 
         return sess.run(encode["weights"]), sess.run(encode["biases"]) # FIXME how about encoded input for next layer? write to file
 
