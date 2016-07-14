@@ -85,6 +85,7 @@ def get_next_batch(filename, batch_size):
                 yield this_batch
                 this_batch = []
 
+
 """
 #####################################
 ### STACKED DENOISING AUTOENCODER ###
@@ -130,6 +131,8 @@ class SDAutoencoder:
         self.depth = len(dims)
         self.weights = []
         self.biases = []
+        self.feeder_x = get_next_batch(xs_filepath, batch_size=batch_size)
+        self.feeder_y = get_next_batch(ys_filepath, batch_size=batch_size)
 
     def add_noise(self, x):
         if self.noise == "gaussian":
