@@ -59,7 +59,7 @@ def get_next_batch(filename, batch_size):
     from the given file.
 
     :param filename:
-    :param criterion:
+    :param batch_size:
     :return:
     """
     with open(filename, "rt") as file:
@@ -86,22 +86,48 @@ def get_next_batch(filename, batch_size):
 """
 
 
+class NNLayer:
+
+    def __init__(self, input_dim, output_dim, activation=None, weights=None, biases=None):
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.activation = activation
+        self.weights = weights
+        self.biases = biases
+
+    def set_wb(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
+
+    @property
+    def is_pretrained(self):
+        return not (self.weights is None and self.biases is None)
+
+    def encode(self, input_tensor):
+        assert self.is_pretrained, "Cannot encode when not pretrained."
+        return self.activation(tf.matmul(input_tensor, self.weights) + self.biases)
+
+
 class SDAutoencoder:
     """A stacked denoising autoencoder."""
 
+    # def check_assertions(self):
+    #     global allowed_activations, allowed_losses
+    #     assert self.loss in allowed_losses, "Incorrect loss given."
+    #     assert 'list' in str(type(self.dims)), "dims must be a list even if there is one layer."
+    #     assert len(self.epochs) == len(self.dims), "No. of epochs must equal to no. of hidden layers."
+    #     assert len(self.activations) == len(self.dims), "No. of activations must equal to no. of hidden layers."
+    #     assert all(True if x > 0 else False for x in self.epochs), "No. of epoch must be at least 1."
+    #     assert set(self.activations + allowed_activations) == set(allowed_activations), "Incorrect activation given."
+    #     assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
     def check_assertions(self):
         global allowed_activations, allowed_losses
-        assert self.loss in allowed_losses, "Incorrect loss given."
-        assert 'list' in str(type(self.dims)), "dims must be a list even if there is one layer."
-        assert len(self.epochs) == len(self.dims), "No. of epochs must equal to no. of hidden layers."
-        assert len(self.activations) == len(self.dims), "No. of activations must equal to no. of hidden layers."
-        assert all(True if x > 0 else False for x in self.epochs), "No. of epoch must be at least 1."
-        assert set(self.activations + allowed_activations) == set(allowed_activations), "Incorrect activation given."
         assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
 
     def __init__(self, dims, activations, epochs, noise=0, loss="cross-entropy",
                  lr=0.0001, batch_size=100, print_step=50):
         """
+        Example: sda = SDAutoencoder([784, 400, 200, 100], ["relu", "relu", "relu"], [200, 200, 200])
 
         :param dims:
         :param activations:
@@ -112,8 +138,11 @@ class SDAutoencoder:
         :param batch_size:
         :param print_step:
         """
-        self.dims = dims
-        self.activations = activations
+        self.input_dim = dims[0]
+        self.output_dim = dims[-1]
+        self.hidden_layers = self.create_new_layers(dims[1:-1], activations)
+        # self.dims = dims
+        # self.activations = activations
         self.epochs = epochs
         self.noise = noise
         self.loss = loss
@@ -123,8 +152,8 @@ class SDAutoencoder:
 
         self.check_assertions()
         self.depth = len(dims)
-        self.weights = []
-        self.biases = []
+        # self.weights = []
+        # self.biases = []
 
     def corrupt(self, tensor, corruption_level=0.5):
         """Uses the masking noise algorithm to mask corruption_level proportion
@@ -149,7 +178,26 @@ class SDAutoencoder:
         with open(filename, "ab") as file:
             np.savetxt(file, data, delimiter=",")
 
-    def pretrain_layer(self, input_dim, output_dim, num_batches, batch_generator, act=tf.nn.sigmoid):
+    # def get_encoded_input(self, input_tensor, depth):
+    #     """Recursive implementation.
+    #
+    #     :param input_tensor:
+    #     :param depth:
+    #     :return:
+    #     """
+    #     def encoder_helper(current_input_tensor, current_depth, hidden_layer_index):
+    #         if current_depth == 0:
+    #             return current_input_tensor
+    #         encoded = self.hidden_layers[hidden_layer_index].encode(current_input_tensor)
+    #         return encoder_helper(encoded, current_depth - 1, hidden_layer_index + 1)
+    #     return encoder_helper(input_tensor, depth, 0)
+
+    def get_encoded_input(self, input_tensor, depth):
+        for i in range(depth):
+            input_tensor = self.hidden_layers[i].encode(input_tensor)
+        return input_tensor
+
+    def pretrain_layer(self, input_dim, output_dim, depth, num_batches, batch_generator, act=tf.nn.sigmoid):
         sess = tf.Session()
 
         x_true = tf.placeholder(tf.float32, shape=[None, input_dim])
@@ -187,3 +235,8 @@ class SDAutoencoder:
             return tf.reduce_mean(-tf.reduce_sum(
                 tensor_1 * tf.log(tensor_2) + (1 - tensor_1) * tf.log(1 - tensor_2), reduction_indices=[1]
             ))
+
+    def create_new_layers(self, dims, activations):
+        assert set(activations + allowed_activations) == set(allowed_activations), "Incorrect activation(s) given."
+        assert len(dims) == len(activations), "Length of dims is not equal to length of activations."
+        return [NNLayer(dims[i], dims[i + 1], activations[i]) for i in range(len(activations))]
