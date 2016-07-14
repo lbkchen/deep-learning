@@ -144,8 +144,8 @@ scaleAndNormalize <- function(dtf) {
 #     mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
 #     scaleAndNormalize()
 
-print(ncol(Sam))
-print(colnames(Sam))
+# print(ncol(Sam))
+# print(colnames(Sam))
 
 # Preprocess xs
 # if (which.variable == "whole") {
@@ -161,12 +161,12 @@ print(colnames(Sam))
 #Sam[StatePatientID %in% test.set$x,] %>%
 #    write.csv("data/TestSAM")
 
-Sam %>% filter(StatePatientID %in% train.set$x) %>% write.csv("data/TrainSAM")
-Sam %>% filter(StatePatientID %in% test.set$x) %>% write.csv("data/TestSAM")
-
-if (which.variable == "x") {
-
-}
+# Sam %>% filter(StatePatientID %in% train.set$x) %>% write.csv("data/TrainSAM")
+# Sam %>% filter(StatePatientID %in% test.set$x) %>% write.csv("data/TestSAM")
+#
+# if (which.variable == "x") {
+#
+# }
 # Split data into labels and features
 # Sam.ys <- Sam[1:3]
 # Sam.xs <- Sam[4:ncol(Sam)]
