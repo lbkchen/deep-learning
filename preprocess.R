@@ -1,12 +1,21 @@
 library(rlist)
 library(mosaic)
 library(dplyr)
+library(data.table)
 
 args <- commandArgs(trailingOnly = TRUE)
 argID <- args[1]
+which.variable <- args[2] # either x, y, or whole
 
-fileName <- paste0("data/SAM01", argID, ".csv")
-Sam <- read.file(fileName)
+# fileName <- paste0("data/SAM01", argID, ".csv")
+filename <- argID
+# Sam <- read.file(fileName)
+# train.set <- read.file("data/train.csv")
+# test.set <- read.file("data/test.csv")
+
+Sam <- fread(fileName)
+train.set <- fread("data/train.csv")
+test.set <- fread("data/test.csv")
 
 ####################
 # HELPER FUNCTIONS #
@@ -89,46 +98,64 @@ scaleAndNormalize <- function(dtf) {
 # GET INFORMATION ABOUT DATA #
 ##############################
 
-Sam <- Sam %>% select_if(hasAllNumeric)
+# Sam <- Sam %>% select_if(hasAllNumeric)
 
 # print(paste("Num cols with only numerical entries:", numColsWith(Sam, function(v){
 #   is.numeric(v)
 # })))
-# 
+#
 # print(paste("Num cols with only zero entries:", numColsWith(Sam, function(v){
 #   mean(v) == 0
 # })))
-# 
+#
 # print(paste("Num cols with negative entries:", numColsWith(Sam, function(v){
 #   any(v < 0)
 # })))
-# 
+#
 # print(paste("Num cols with binary values:", numColsWith(Sam, onlyBinary)))
 # print(paste("Num cols with non-binary values:", numColsWith(Sam, notOnlyBinary)))
 
-SamNonBinary <- Sam %>% select_if(notOnlyBinary)
-
-SummaryOfNonBinary <- data.frame(
-  name=names(SamNonBinary),
-  mean=SamNonBinary %>% vapply(mean, numeric(1)),
-  sd=SamNonBinary %>% vapply(sd, numeric(1)),
-  min=SamNonBinary %>% vapply(min, numeric(1)),
-  q1=SamNonBinary %>% vapply(function(v){quantile(v)["25%"]}, numeric(1)),
-  median=SamNonBinary %>% vapply(median, numeric(1)),
-  q3=SamNonBinary %>% vapply(function(v){quantile(v)["75%"]}, numeric(1)),
-  max=SamNonBinary %>% vapply(max, numeric(1))
-)
-
-summaryDest <- paste0("data/summaries/summary_of_non_binary", argID, ".csv")
-write.csv(SummaryOfNonBinary, summaryDest)
+# SamNonBinary <- Sam %>% select_if(notOnlyBinary)
+#
+# SummaryOfNonBinary <- data.frame(
+#   name=names(SamNonBinary),
+#   mean=SamNonBinary %>% vapply(mean, numeric(1)),
+#   sd=SamNonBinary %>% vapply(sd, numeric(1)),
+#   min=SamNonBinary %>% vapply(min, numeric(1)),
+#   q1=SamNonBinary %>% vapply(function(v){quantile(v)["25%"]}, numeric(1)),
+#   median=SamNonBinary %>% vapply(median, numeric(1)),
+#   q3=SamNonBinary %>% vapply(function(v){quantile(v)["75%"]}, numeric(1)),
+#   max=SamNonBinary %>% vapply(max, numeric(1))
+# )
+#
+# summaryDest <- paste0("data/summaries/summary_of_non_binary", argID, ".csv")
+# write.csv(SummaryOfNonBinary, summaryDest)
 
 ###################
 # PREPROCESS DATA #
 ###################
 
+# Processed whole SAM Table
+# Sam %>%
+#     select(-ED_YTM) %>%
+#     mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
+#     scaleAndNormalize()
+
+# Preprocess xs
+if (which.variable == "whole") {
+    # Train set
+    Sam[StatePatientID %in% train.set$x,] %>%
+        write.csv("data/TrainSAM")
+    Sam[StatePatientID %in% test.set$x,] %>%
+        write.csv("data/TestSAM")
+}
+
+if (which.variable == "x") {
+    
+}
 # Split data into labels and features
-Sam.ys <- Sam[1:3]
-Sam.xs <- Sam[4:ncol(Sam)]
+# Sam.ys <- Sam[1:3]
+# Sam.xs <- Sam[4:ncol(Sam)]
 
 # preprocess <- function(dtf) {
 #   dtf <- dtf %>%
@@ -142,12 +169,12 @@ Sam.xs <- Sam[4:ncol(Sam)]
 #   mutate_if(isNotDenseOrBinary, unitScale) %>%
 #   write.csv("data/SAMX.csv")
 
-Sam.xs %>%
-  scaleAndNormalize() %>%
-  write.csv(paste0("data/splits/SAMX", argID, ".csv"))
+# Sam.xs %>%
+#   scaleAndNormalize() %>%
+#   write.csv(paste0("data/splits/SAMX", argID, ".csv"))
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
-Sam.ys %>%
-  select(StatePatientID, IP_YTM) %>%
-  mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
-  write.csv(paste0("data/splits/SAMY", argID, ".csv"))
+# Sam.ys %>%
+#   select(StatePatientID, IP_YTM) %>%
+#   mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
+#   write.csv(paste0("data/splits/SAMY", argID, ".csv"))
