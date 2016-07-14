@@ -1,6 +1,7 @@
 library(rlist)
 library(mosaic)
 library(dplyr)
+library(dtplyr)
 library(data.table)
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -13,7 +14,7 @@ fileName <- argID
 # train.set <- read.file("data/train.csv")
 # test.set <- read.file("data/test.csv")
 
-Sam <- fread(fileName)
+Sam <- read.file(fileName)
 train.set <- fread("data/train.csv")
 test.set <- fread("data/test.csv")
 
@@ -153,10 +154,13 @@ print(colnames(Sam))
 #         write.csv("data/TestSAM")
 # }
 
-Sam[StatePatientID %in% train.set$x,] %>%
-    write.csv("data/TrainSAM")
-Sam[StatePatientID %in% test.set$x,] %>%
-    write.csv("data/TestSAM")
+#Sam[StatePatientID %in% train.set$x,] %>%
+#    write.csv("data/TrainSAM")
+#Sam[StatePatientID %in% test.set$x,] %>%
+#    write.csv("data/TestSAM")
+
+Sam %>% filter(StatePatientID %in% train.set$x) %>% write.csv("data/TrainSAM")
+Sam %>% filter(StatePatientID %in% test.set$x) %>% write.csv("data/TestSAM")
 
 if (which.variable == "x") {
 
