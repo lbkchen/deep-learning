@@ -120,6 +120,7 @@ class SDAutoencoder:
     #     assert all(True if x > 0 else False for x in self.epochs), "No. of epoch must be at least 1."
     #     assert set(self.activations + allowed_activations) == set(allowed_activations), "Incorrect activation given."
     #     assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
+
     def check_assertions(self):
         global allowed_activations, allowed_losses
         assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
@@ -197,11 +198,15 @@ class SDAutoencoder:
             input_tensor = self.hidden_layers[i].encode(input_tensor)
         return input_tensor
 
-    def pretrain_layer(self, input_dim, output_dim, depth, num_batches, batch_generator, act=tf.nn.sigmoid):
+    def pretrain_layer(self, depth, num_batches, batch_generator, act=tf.nn.sigmoid):
         sess = tf.Session()
 
-        x_true = tf.placeholder(tf.float32, shape=[None, input_dim])
-        x_corrupt = self.corrupt(x_true)
+        hidden_layer = self.hidden_layers[depth]
+        input_dim, output_dim = hidden_layer.input_dim, hidden_layer.output_dim
+
+        x_original = tf.placeholder(tf.float32, shape=[None, input_dim])
+        x_latent = self.get_encoded_input(x_original, depth)
+        x_corrupt = self.corrupt(x_latent)
 
         encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], dtype=tf.float32)),
                   "biases": tf.Variable(tf.truncated_normal([output_dim], dtype=tf.float32))}
@@ -213,20 +218,22 @@ class SDAutoencoder:
         decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
 
         # Reconstruction loss
-        loss = self.get_loss(x_true, decoded)
+        loss = self.get_loss(x_latent, decoded)
 
         train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         sess.run(tf.initialize_all_variables())
 
         generator = batch_generator()
         for i in range(num_batches):
-            batch_x_true = next(generator)
-            sess.run(train_op, feed_dict={x_true: batch_x_true})
+            batch_x_original = next(generator)
+            sess.run(train_op, feed_dict={x_original: batch_x_original})
             if (i + 1) % self.print_step == 0:
-                loss_value = sess.run(loss, feed_dict={x_true: batch_x_true})
+                loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
                 print("Batch loss = %s" % loss_value)
 
-        return sess.run(encode["weights"]), sess.run(encode["biases"]) # FIXME how about encoded input for next layer? write to file
+        # Set the weights and biases of pretrained hidden layer
+        hidden_layer.weights = sess.run(encode["weights"])
+        hidden_layer.biases = sess.run(encode["biases"])
 
     def get_loss(self, tensor_1, tensor_2):
         if self.loss == "rmse":

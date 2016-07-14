@@ -14,9 +14,11 @@ fileName <- argID
 # train.set <- read.file("data/train.csv")
 # test.set <- read.file("data/test.csv")
 
-Sam <- read.file(fileName)
-train.set <- fread("data/train.csv")
-test.set <- fread("data/test.csv")
+# Sam <- read.file(fileName)
+# train.set <- fread("data/train.csv")
+# test.set <- fread("data/test.csv")
+Sam.xs <- fread("data/splits/XTrainSAM.csv")
+Sam.ys <- fread("data/splits/YTrainSAM.csv")
 
 ####################
 # HELPER FUNCTIONS #
@@ -181,12 +183,11 @@ if (which.variable == "x") {
 #   mutate_if(isNotDenseOrBinary, unitScale) %>%
 #   write.csv("data/SAMX.csv")
 
-# Sam.xs %>%
-#   scaleAndNormalize() %>%
-#   write.csv(paste0("data/splits/SAMX", argID, ".csv"))
+Sam.xs %>%
+  scaleAndNormalize() %>%
+  write.csv("data/splits/XTrainSAMP")
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
-# Sam.ys %>%
-#   select(StatePatientID, IP_YTM) %>%
-#   mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
-#   write.csv(paste0("data/splits/SAMY", argID, ".csv"))
+Sam.ys %>%
+  mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
+  write.csv("data/splits/YTrainSAMP")
