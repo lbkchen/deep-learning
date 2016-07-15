@@ -3,7 +3,6 @@ library(readr)
 
 args <- commandArgs(trailingOnly = TRUE)
 fileName <- args[1]
-fileName <- "sXTrainSAM.csv"
 
 print(paste("Reading", fileName))
 
