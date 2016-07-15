@@ -1,6 +1,7 @@
 library(rlist)
 library(mosaic)
 library(dplyr)
+library(data.table)
 
 args <- commandArgs(trailingOnly = TRUE)
 argID <- args[1]
@@ -15,7 +16,7 @@ fileName <- argID
 # Sam <- read.file(fileName)
 # train.set <- fread("data/train.csv")
 # test.set <- fread("data/test.csv")
-Sam.xs <- read.file("data/splits/XTrainSAM.csv")
+Sam.xs <- fread("data/splits/XTrainSAM1.csv")
 #Sam.ys <- read.file("data/splits/YTrainSAM.csv")
 
 ####################
@@ -192,8 +193,9 @@ scaleAndNormalize <- function(dtf) {
 #  scaleAndNormalize() %>%
 #  write.csv("data/splits/XTrainSAMP.csv", row.names=F)
 
-Sam.xs <- vapply(Sam.xs, simp_preprocess, numeric(nrow(Sam.xs)))
-write.csv(Sam.xs, "data/splits/XTrainSAMP.csv", row.names=F)
+Sam.xs <- sapply(Sam.xs, as.numeric)
+Sam.xs <- sapply(Sam.xs, unitScale)
+write.csv(Sam.xs, "data/splits/XTrainSAMP1.csv", row.names=F)
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
 #Sam.ys %>%
