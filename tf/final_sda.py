@@ -6,7 +6,7 @@ Ken Chen
 
 """
 ###########################
-### SETUP AND VARIABLES ###
+### SETUP AND CONSTANTS ###
 ###########################
 """
 
@@ -18,16 +18,13 @@ import csv
 from functools import wraps
 
 
-allowed_activations = ["sigmoid", "tanh", "relu", "softmax"]
-allowed_losses = ["rmse", "cross-entropy"]
+ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
+ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-X_TRAIN_PATH = "../data/splits/XTrainSAM.csv"
-Y_TRAIN_PATH = "../data/splits/YTrainSAM.csv"
-X_TEST_PATH = "../data/splits/XTestSAM.csv"
+X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+Y_TRAIN_PATH = "../data/splits/PYTrainSAM.csv"
+X_TEST_PATH = "../data/splits/PXTestSAM.csv"
 Y_TEST_PATH = "../data/splits/YTestSAM.csv"
-
-# xs_filepath = "../data/S01X.csv"
-# ys_filepath = "../data/S01Y.csv"
 
 
 """
@@ -62,8 +59,8 @@ def get_next_batch(filename, batch_size, skip_header=True):
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
 
-    :param filename:
-    :param batch_size:
+    :param filename: A string of the file to write to.
+    :param batch_size: The number
     :return:
     """
     with open(filename, "rt") as file:
@@ -91,8 +88,20 @@ def get_next_batch(filename, batch_size, skip_header=True):
 
 
 class NNLayer:
+    """A container class to represent a hidden layer in the autoencoder network."""
 
-    def __init__(self, input_dim, output_dim, activation=None, weights=None, biases=None):
+    def __init__(self, input_dim, output_dim, activation=lambda x: x, weights=None, biases=None):
+        """Initializes an NNLayer with empty weights/biases (default). Weights/biases
+        are meant to be updated during pre-training with set_wb. Also has methods to
+        transform an input_tensor to an encoded representation via the weights/biases
+        of the layer.
+
+        :param input_dim: An int representing the dimension of input to this layer.
+        :param output_dim: An int representing the dimension of the encoded output.
+        :param activation: A function to transform the inputs to this layer (sigmoid, etc.).
+        :param weights: A tensor with shape [input_dim, output_dim]
+        :param biases: A tensor with shape [output_dim]
+        """
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.activation = activation
@@ -100,6 +109,7 @@ class NNLayer:
         self.biases = biases
 
     def set_wb(self, weights, biases):
+        #  FIXME: assert that first dimension of W is input_dim, 2nd is output_dim
         self.weights = weights
         self.biases = biases
 
@@ -115,39 +125,49 @@ class NNLayer:
 class SDAutoencoder:
     """A stacked denoising autoencoder."""
 
-    # def check_assertions(self):
-    #     global allowed_activations, allowed_losses
-    #     assert self.loss in allowed_losses, "Incorrect loss given."
-    #     assert 'list' in str(type(self.dims)), "dims must be a list even if there is one layer."
-    #     assert len(self.epochs) == len(self.dims), "No. of epochs must equal to no. of hidden layers."
-    #     assert len(self.activations) == len(self.dims), "No. of activations must equal to no. of hidden layers."
-    #     assert all(True if x > 0 else False for x in self.epochs), "No. of epoch must be at least 1."
-    #     assert set(self.activations + allowed_activations) == set(allowed_activations), "Incorrect activation given."
-    #     assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
-
     def check_assertions(self):
-        global allowed_activations, allowed_losses
         assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
 
     def __init__(self, dims, activations, noise=0.0, loss="cross-entropy",
                  lr=0.0001, batch_size=100, print_step=50):
-        """
-        Example: sda = SDAutoencoder([784, 400, 200, 100], ["relu", "relu", "relu"], [200, 200, 200])
+        """Initializes a Stacked Denoising Autoencoder based on the dimension of each
+        layer in the neural network and the activation function of each layer. SDA only
+        undergoes parameter setup at initialization. Main functions to utilize the SDA are:
 
-        :param dims:
-        :param activations:
-        :param epochs:
-        :param noise:
-        :param loss:
-        :param lr:
-        :param batch_size:
-        :param print_step:
+        pretrain_network: (unsupervised) Greedily pre-trains every layer of the neural network,
+            beginning with feeding the raw data input to the first layer, and getting an encoded
+            version from the output of the first layer. Adjusts parameters of the network (weights and
+            biases of each layer) during training, via a stochastic Adam optimization method.
+
+        finetune_parameters: (supervised) Adds a layer of fine-tuning to the network, adjusting
+            the weights and biases of all layers simultaneously via a softmax classifier with test
+            y-values. Also prints batch accuracy during each print step.
+
+        write_encoded_input: Reads the x-values from a test data source and transforms them
+            accordingly through the network (which has all parameters optimized from pre-training).
+            Writes the newly represented features to a specified file.
+
+        (Example usage)
+            sda = SDAutoencoder([784, 400, 200, 10], ["relu", "relu", "relu"], noise=0.05)
+            sda.pretrain_network(X_TRAIN_PATH)
+            sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
+            sda.write_encoded_input(your_filename, X_TEST_PATH, input_dim)
+
+
+        :param dims: A list of ints containing the dimensions of the x-values at each step of
+            the network. The first entry is the overall input_dim, and the last entry is the
+            overall output_dim from the network.
+        :param activations: A list of activation functions for each layer in the network.
+        :param noise: A double from 0 to 1 representing the amount of masking on the input (noise).
+        :param loss: A string representing the loss function used.
+        :param lr: A double representing the learning rate of the optimization method.
+        :param batch_size: The number of cases fed to the network in each batch from file.
+        :param print_step: The number of batches processed before each print progress step.
         """
         self.input_dim = dims[0]
         self.output_dim = dims[-1]
         self.hidden_layers = self.create_new_layers(dims, activations)
-        # self.dims = dims
-        # self.activations = activations
+
         self.noise = noise
         self.loss = loss
         self.lr = lr
@@ -155,8 +175,6 @@ class SDAutoencoder:
         self.print_step = print_step
 
         self.check_assertions()
-        # self.weights = []
-        # self.biases = []
         print("Initialized SDA network with dims %s, noise %s, loss %s, learning rate %s, and batch_size %s."
               % (dims, self.noise, self.loss, self.lr, self.batch_size))
 
@@ -184,6 +202,13 @@ class SDAutoencoder:
             np.savetxt(file, data, delimiter=",")
 
     def write_encoded_input(self, filename, x_test_path, input_dim):
+        """Get encoded feature representation.
+
+        :param filename:
+        :param x_test_path:
+        :param input_dim:
+        :return:
+        """
         sess = tf.Session()
         x_test = get_next_batch(x_test_path, self.batch_size)
         x_input = tf.placeholder(tf.float32, shape=[None, input_dim])
@@ -226,7 +251,7 @@ class SDAutoencoder:
         encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32)),
                   "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32))}
 
-        decode = {"weights": tf.transpose(encode["weights"]),
+        decode = {"weights": tf.transpose(encode["weights"]),  # Tied weights
                   "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32))}
 
         encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
@@ -241,14 +266,13 @@ class SDAutoencoder:
         step = 0
         for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
             sess.run(train_op, feed_dict={x_original: batch_x_original})
-            if (step + 1) % self.print_step == 0:
+            if step % self.print_step == 0:
                 loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
                 print("Step %s, batch loss = %s" % (step, loss_value))
             step += 1
 
         # Set the weights and biases of pretrained hidden layer
-        hidden_layer.weights = sess.run(encode["weights"])
-        hidden_layer.biases = sess.run(encode["biases"])
+        hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))  # Need a feed_dict?
 
         print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
@@ -258,19 +282,23 @@ class SDAutoencoder:
         elif self.loss == "cross-entropy":
             return tf.reduce_mean(-tf.reduce_sum(
                 tensor_1 * tf.log(tensor_2) + (1 - tensor_1) * tf.log(1 - tensor_2), reduction_indices=[1]
-            ))
+            ))  # FIXME: Check to verify correctness of math
 
     def create_new_layers(self, dims, activations):
-        assert set(activations + allowed_activations) == set(allowed_activations), "Incorrect activation(s) given."
+        """
+
+        :param dims: Ex. [784, 200, 10]
+        :param activations: Ex. ['relu', 'relu']
+        :return: [NNLayer(input_dim=784, output_dim=200), NNLayer(input_dim=200, output_dim=10)]
+        """
+        assert set(activations + ALLOWED_ACTIVATIONS) == set(ALLOWED_ACTIVATIONS), "Incorrect activation(s) given."
         assert len(dims) == len(activations) + 1, "Incorrect number of layers/activations."
         return [NNLayer(dims[i], dims[i + 1], activations[i]) for i in range(len(activations))]
 
     @stopwatch
-    def pretrain_network(self, x_train_path, y_train_path, x_test_path):
+    def pretrain_network(self, x_train_path):
         for i in range(len(self.hidden_layers)):
             x_train = get_next_batch(x_train_path, self.batch_size)
-            y_train = get_next_batch(y_train_path, self.batch_size)
-            x_test = get_next_batch(x_test_path, self.batch_size)
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
 
     @stopwatch
@@ -281,7 +309,7 @@ class SDAutoencoder:
 
         x = tf.placeholder(tf.float32, self.input_dim)
         x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers)) # Full depth encoding
-        W = tf.Variable(tf.truncated_normal(shape=[500, 2], stddev=0.1))
+        W = tf.Variable(tf.truncated_normal(shape=[500, 2], stddev=0.1))  # FIXME: Make this a parameter
         b = tf.Variable(tf.constant(0.1, shape=[2]))
         y_pred = tf.nn.softmax(tf.matmul(x_encoded, W) + b)
 
@@ -292,7 +320,7 @@ class SDAutoencoder:
         x_train = get_next_batch(x_train_path, self.batch_size)
         y_train = get_next_batch(y_train_path, self.batch_size)
 
-        for i in range(1000):
+        for i in range(1000):  # FIXME: Make a parameter
             batch_xs, batch_ys = next(x_train), next(y_train)
             sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
@@ -308,8 +336,9 @@ def main():
                         noise=0.05,
                         loss="cross-entropy")
 
-    sda.pretrain_network(X_TRAIN_PATH, Y_TRAIN_PATH, X_TEST_PATH)
+    sda.pretrain_network(X_TRAIN_PATH)
     sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
+    sda.write_encoded_input("../data/transformed.csv", X_TEST_PATH, 3997)
 
 
 if __name__ == "__main__":
