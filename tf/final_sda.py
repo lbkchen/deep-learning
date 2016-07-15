@@ -250,12 +250,37 @@ class SDAutoencoder:
         assert len(dims) == len(activations), "Length of dims is not equal to length of activations."
         return [NNLayer(dims[i], dims[i + 1], activations[i]) for i in range(len(activations))]
 
-    def get_extracted_features(self, x_train_path, y_train_path, x_test_path):
+    def pretrain_network(self, x_train_path, y_train_path, x_test_path):
         for i in range(len(self.hidden_layers)):
             x_train = get_next_batch(x_train_path, self.batch_size)
             y_train = get_next_batch(y_train_path, self.batch_size)
             x_test = get_next_batch(x_test_path, self.batch_size)
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
+
+    def finetune_parameters(self, x_train_path, y_train_path):
+        sess = tf.Session()
+        x = tf.placeholder(tf.float32, self.input_dim)
+        x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers)) # Full depth encoding
+        W = tf.Variable(tf.truncated_normal(shape=[500, 2], stddev=0.1))
+        b = tf.Variable(tf.constant(0.1, shape=[2]))
+        y_pred = tf.nn.softmax(tf.matmul(x_encoded, W) + b)
+
+        y_actual = tf.placeholder(tf.float32, [2])
+        cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
+        train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy)
+
+        x_train = get_next_batch(x_train_path, self.batch_size)
+        y_train = get_next_batch(y_train_path, self.batch_size)
+
+        for i in range(1000):
+            batch_xs, batch_ys = next(x_train), next(y_train)
+            sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
+
+            if i % 100 == 0:
+                correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
+                accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                print("Batch accuracy: ", sess.run(accuracy, feed_dict={batch_xs, batch_ys}))
+
 
 
 def main():
@@ -264,7 +289,7 @@ def main():
                         noise=0.05,
                         loss="cross-entropy")
 
-    sda.get_extracted_features(X_TRAIN_PATH, Y_TRAIN_PATH, X_TEST_PATH)
+    sda.pretrain_network(X_TRAIN_PATH, Y_TRAIN_PATH, X_TEST_PATH)
 
 
 if __name__ == "__main__":
