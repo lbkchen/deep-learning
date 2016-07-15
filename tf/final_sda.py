@@ -16,14 +16,18 @@ import numpy as np
 import time
 import csv
 from functools import wraps
-from sklearn.preprocessing import MaxAbsScaler
 
 
 allowed_activations = ["sigmoid", "tanh", "relu", "softmax"]
 allowed_losses = ["rmse", "cross-entropy"]
 
-xs_filepath = "../data/S01X.csv"
-ys_filepath = "../data/S01Y.csv"
+X_TRAIN_PATH = "../data/splits/XTrainSAMP.csv"
+Y_TRAIN_PATH = "../data/splits/YTrainSAMP.csv"
+X_TEST_PATH = "../data/splits/XTestSAMP.csv"
+Y_TEST_PATH = "../data/splits/YTestSAM.csv"
+
+# xs_filepath = "../data/S01X.csv"
+# ys_filepath = "../data/S01Y.csv"
 
 
 """
@@ -125,7 +129,7 @@ class SDAutoencoder:
         global allowed_activations, allowed_losses
         assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
 
-    def __init__(self, dims, activations, epochs, noise=0, loss="cross-entropy",
+    def __init__(self, dims, activations, noise=0.0, loss="cross-entropy",
                  lr=0.0001, batch_size=100, print_step=50):
         """
         Example: sda = SDAutoencoder([784, 400, 200, 100], ["relu", "relu", "relu"], [200, 200, 200])
@@ -144,7 +148,6 @@ class SDAutoencoder:
         self.hidden_layers = self.create_new_layers(dims[1:-1], activations)
         # self.dims = dims
         # self.activations = activations
-        self.epochs = epochs
         self.noise = noise
         self.loss = loss
         self.lr = lr
@@ -152,7 +155,6 @@ class SDAutoencoder:
         self.print_step = print_step
 
         self.check_assertions()
-        self.depth = len(dims)
         # self.weights = []
         # self.biases = []
 
@@ -198,7 +200,7 @@ class SDAutoencoder:
             input_tensor = self.hidden_layers[i].encode(input_tensor)
         return input_tensor
 
-    def pretrain_layer(self, depth, num_batches, batch_generator, act=tf.nn.sigmoid):
+    def pretrain_layer(self, depth, batch_generator, act=tf.nn.sigmoid):
         sess = tf.Session()
 
         hidden_layer = self.hidden_layers[depth]
@@ -223,13 +225,13 @@ class SDAutoencoder:
         train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
         sess.run(tf.initialize_all_variables())
 
-        generator = batch_generator()
-        for i in range(num_batches):
-            batch_x_original = next(generator)
+        step = 0
+        for batch_x_original in batch_generator:
             sess.run(train_op, feed_dict={x_original: batch_x_original})
-            if (i + 1) % self.print_step == 0:
+            if (step + 1) % self.print_step == 0:
                 loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
                 print("Batch loss = %s" % loss_value)
+            step += 1
 
         # Set the weights and biases of pretrained hidden layer
         hidden_layer.weights = sess.run(encode["weights"])
@@ -247,3 +249,23 @@ class SDAutoencoder:
         assert set(activations + allowed_activations) == set(allowed_activations), "Incorrect activation(s) given."
         assert len(dims) == len(activations), "Length of dims is not equal to length of activations."
         return [NNLayer(dims[i], dims[i + 1], activations[i]) for i in range(len(activations))]
+
+    def get_extracted_features(self, x_train_path, y_train_path, x_test_path):
+        for i in range(len(self.hidden_layers)):
+            x_train = get_next_batch(x_train_path, self.batch_size)
+            y_train = get_next_batch(y_train_path, self.batch_size)
+            x_test = get_next_batch(x_test_path, self.batch_size)
+            self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
+
+
+def main():
+    sda = SDAutoencoder(dims=[3997, 500, 500, 500],
+                        activations=["sigmoid", "sigmoid", "sigmoid"],
+                        noise=0.05,
+                        loss="cross-entropy")
+
+    sda.get_extracted_features(X_TRAIN_PATH, Y_TRAIN_PATH, X_TEST_PATH)
+
+
+if __name__ == "__main__":
+    main()
