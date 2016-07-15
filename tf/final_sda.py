@@ -69,7 +69,7 @@ def get_next_batch(filename, batch_size):
     with open(filename, "rt") as file:
         reader = csv.reader(file)
         index = 0
-        this_batch = []
+        this_batch = []  # FIXME: Can probably optimize to take numpy array
         for row in reader:
             this_batch.append(row)
             index += 1
@@ -176,6 +176,15 @@ class SDAutoencoder:
         """
         with open(filename, "ab") as file:
             np.savetxt(file, data, delimiter=",")
+
+    def write_encoded_input(self, filename, x_test_path, input_dim):
+        sess = tf.Session()
+        x_test = get_next_batch(x_test_path, self.batch_size)
+        x_input = tf.placeholder(tf.float32, shape=[None, input_dim])
+        x_encoded = self.get_encoded_input(x_input, len(self.hidden_layers))
+
+        for x_batch in x_test:
+            self.write_data(sess.run(x_encoded, feed_dict={x_input: x_batch}), filename)
 
     # def get_encoded_input(self, input_tensor, depth):
     #     """Recursive implementation.
