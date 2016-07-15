@@ -1,8 +1,6 @@
 library(rlist)
 library(mosaic)
 library(dplyr)
-library(dtplyr)
-library(data.table)
 
 args <- commandArgs(trailingOnly = TRUE)
 argID <- args[1]
@@ -17,8 +15,8 @@ fileName <- argID
 # Sam <- read.file(fileName)
 # train.set <- fread("data/train.csv")
 # test.set <- fread("data/test.csv")
-Sam.xs <- fread("data/splits/XTrainSAM.csv")
-Sam.ys <- fread("data/splits/YTrainSAM.csv")
+Sam.xs <- read.file("data/splits/XTrainSAM.csv")
+#Sam.ys <- read.file("data/splits/YTrainSAM.csv")
 
 ####################
 # HELPER FUNCTIONS #
@@ -93,8 +91,15 @@ preprocess <- function(v) {
   return(v)
 }
 
+simp_preprocess <- function(v) {
+  if (notOnlyBinary(v)) {
+    return(unitScale(v))
+  }
+  return(v)
+}
+
 scaleAndNormalize <- function(dtf) {
-  return(dtf %>% vapply(preprocess, numeric(nrow(dtf))))
+  return(dtf %>% sapply(simp_preprocess))
 }
 
 ##############################
@@ -183,11 +188,14 @@ scaleAndNormalize <- function(dtf) {
 #   mutate_if(isNotDenseOrBinary, unitScale) %>%
 #   write.csv("data/SAMX.csv")
 
-Sam.xs %>%
-  scaleAndNormalize() %>%
-  write.csv("data/splits/XTrainSAMP")
+#Sam.xs %>%
+#  scaleAndNormalize() %>%
+#  write.csv("data/splits/XTrainSAMP.csv", row.names=F)
+
+Sam.xs <- vapply(Sam.xs, simp_preprocess, numeric(nrow(Sam.xs)))
+write.csv(Sam.xs, "data/splits/XTrainSAMP.csv", row.names=F)
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
-Sam.ys %>%
-  mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
-  write.csv("data/splits/YTrainSAMP")
+#Sam.ys %>%
+#  mutate(IP_YTM=ifelse(IP_YTM > 0 & IP_YTM < 366, 1, 0)) %>%
+#  write.csv("data/splits/YTrainSAMP.csv", row.names=F)
