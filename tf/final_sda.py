@@ -21,9 +21,9 @@ from functools import wraps
 allowed_activations = ["sigmoid", "tanh", "relu", "softmax"]
 allowed_losses = ["rmse", "cross-entropy"]
 
-X_TRAIN_PATH = "../data/splits/XTrainSAMP.csv"
-Y_TRAIN_PATH = "../data/splits/YTrainSAMP.csv"
-X_TEST_PATH = "../data/splits/XTestSAMP.csv"
+X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+Y_TRAIN_PATH = "../data/splits/PYTrainSAM.csv"
+X_TEST_PATH = "../data/splits/PXTestSAM.csv"
 Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
 # xs_filepath = "../data/S01X.csv"
@@ -280,7 +280,6 @@ class SDAutoencoder:
                 correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
                 print("Batch accuracy: ", sess.run(accuracy, feed_dict={batch_xs, batch_ys}))
-
 
 
 def main():
