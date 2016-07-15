@@ -58,7 +58,7 @@ def stopwatch(f):
 """
 
 
-def get_next_batch(filename, batch_size):
+def get_next_batch(filename, batch_size, skip_header=True):
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
 
@@ -68,6 +68,10 @@ def get_next_batch(filename, batch_size):
     """
     with open(filename, "rt") as file:
         reader = csv.reader(file)
+
+        if skip_header:
+            next(reader)
+
         index = 0
         this_batch = []  # FIXME: Can probably optimize to take numpy array
         for row in reader:
