@@ -3,10 +3,12 @@ library(readr)
 
 args <- commandArgs(trailingOnly = TRUE)
 fileName <- args[1]
+fileName <- "sXTrainSAM.csv"
 
 print(paste("Reading", fileName))
 
 first.line <- fread(paste0("data/splits/", fileName), header = T, nrows = 2)
+print(ncol(first.line))
 Sam <- fread(paste0("data/splits/", fileName), header = T, colClasses = rep("numeric", ncol(first.line))) # remove header
 
 print("Done reading file.")
@@ -17,7 +19,11 @@ for (i in 1:100) {
 }
 
 unitScale <- function(v) {
-  return((v - min(v)) / (max(v) - min(v)))
+  range <- max(v) - min(v)
+  if (range == 0) {
+    return(0)
+  }
+  return((v - min(v)) / range)
 }
 
 print("Starting to scale table.")
