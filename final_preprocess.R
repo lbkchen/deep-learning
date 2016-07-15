@@ -3,6 +3,8 @@ library(readr)
 args <- commandArgs(trailingOnly = TRUE)
 fileName <- args[1]
 
+print(paste("Reading", fileName))
+
 Sam <- read_csv(paste0("data/splits/", fileName), skip = 1) # remove header
 
 print("Done reading file.")
