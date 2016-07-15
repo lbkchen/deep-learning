@@ -1,5 +1,5 @@
 library(data.table)
-library(data.table)
+library(readr)
 
 args <- commandArgs(trailingOnly = TRUE)
 fileName <- args[1]

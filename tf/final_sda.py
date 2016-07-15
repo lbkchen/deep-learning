@@ -21,9 +21,9 @@ from functools import wraps
 allowed_activations = ["sigmoid", "tanh", "relu", "softmax"]
 allowed_losses = ["rmse", "cross-entropy"]
 
-X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-Y_TRAIN_PATH = "../data/splits/PYTrainSAM.csv"
-X_TEST_PATH = "../data/splits/PXTestSAM.csv"
+X_TRAIN_PATH = "../data/splits/XTrainSAM.csv"
+Y_TRAIN_PATH = "../data/splits/YTrainSAM.csv"
+X_TEST_PATH = "../data/splits/XTestSAM.csv"
 Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
 # xs_filepath = "../data/S01X.csv"
