@@ -278,7 +278,6 @@ class SDAutoencoder:
                 print("Batch accuracy: ", sess.run(accuracy, feed_dict={batch_xs, batch_ys}))
 
 
-
 def main():
     sda = SDAutoencoder(dims=[3997, 500, 500, 500],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
