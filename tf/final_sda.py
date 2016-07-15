@@ -113,6 +113,9 @@ class NNLayer:
         self.weights = weights
         self.biases = biases
 
+        print("Set weights of layer with shape", tf.shape(weights))
+        print("Set biases of layer with shape", tf.shape(weights))
+
     @property
     def is_pretrained(self):
         return not (self.weights is None and self.biases is None)
@@ -334,7 +337,7 @@ def main():
     sda = SDAutoencoder(dims=[3997, 500, 500, 500],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         noise=0.05,
-                        loss="cross-entropy")
+                        loss="rmse")
 
     sda.pretrain_network(X_TRAIN_PATH)
     sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
