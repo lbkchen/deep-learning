@@ -157,6 +157,8 @@ class SDAutoencoder:
         self.check_assertions()
         # self.weights = []
         # self.biases = []
+        print("Initialized SDA network with dims %s, noise %s, loss %s, learning rate %s, and batch_size %s."
+              % (dims, self.noise, self.loss, self.lr, self.batch_size))
 
     def corrupt(self, tensor, corruption_level=0.5):
         """Uses the masking noise algorithm to mask corruption_level proportion
@@ -212,6 +214,8 @@ class SDAutoencoder:
     def pretrain_layer(self, depth, batch_generator, act=tf.nn.sigmoid):
         sess = tf.Session()
 
+        print("Starting to pretrain layer %d." % depth)
+
         hidden_layer = self.hidden_layers[depth]
         input_dim, output_dim = hidden_layer.input_dim, hidden_layer.output_dim
 
@@ -219,11 +223,11 @@ class SDAutoencoder:
         x_latent = self.get_encoded_input(x_original, depth)
         x_corrupt = self.corrupt(x_latent)
 
-        encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], dtype=tf.float32)),
-                  "biases": tf.Variable(tf.truncated_normal([output_dim], dtype=tf.float32))}
+        encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32)),
+                  "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32))}
 
         decode = {"weights": tf.transpose(encode["weights"]),
-                  "biases": tf.Variable(tf.truncated_normal([input_dim], dtype=tf.float32))}
+                  "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32))}
 
         encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
         decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
@@ -235,16 +239,18 @@ class SDAutoencoder:
         sess.run(tf.initialize_all_variables())
 
         step = 0
-        for batch_x_original in batch_generator:
+        for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
             sess.run(train_op, feed_dict={x_original: batch_x_original})
             if (step + 1) % self.print_step == 0:
                 loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
-                print("Batch loss = %s" % loss_value)
+                print("Step %s, batch loss = %s" % (step, loss_value))
             step += 1
 
         # Set the weights and biases of pretrained hidden layer
         hidden_layer.weights = sess.run(encode["weights"])
         hidden_layer.biases = sess.run(encode["biases"])
+
+        print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
     def get_loss(self, tensor_1, tensor_2):
         if self.loss == "rmse":
@@ -259,6 +265,7 @@ class SDAutoencoder:
         assert len(dims) == len(activations) + 1, "Incorrect number of layers/activations."
         return [NNLayer(dims[i], dims[i + 1], activations[i]) for i in range(len(activations))]
 
+    @stopwatch
     def pretrain_network(self, x_train_path, y_train_path, x_test_path):
         for i in range(len(self.hidden_layers)):
             x_train = get_next_batch(x_train_path, self.batch_size)
@@ -266,8 +273,12 @@ class SDAutoencoder:
             x_test = get_next_batch(x_test_path, self.batch_size)
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
 
+    @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path):
         sess = tf.Session()
+
+        print("Starting to fine tune parameters of network.")
+
         x = tf.placeholder(tf.float32, self.input_dim)
         x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers)) # Full depth encoding
         W = tf.Variable(tf.truncated_normal(shape=[500, 2], stddev=0.1))
@@ -288,7 +299,7 @@ class SDAutoencoder:
             if i % 100 == 0:
                 correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                print("Batch accuracy: ", sess.run(accuracy, feed_dict={batch_xs, batch_ys}))
+                print("Step %s, batch accuracy: " % i, sess.run(accuracy, feed_dict={batch_xs, batch_ys}))
 
 
 def main():
