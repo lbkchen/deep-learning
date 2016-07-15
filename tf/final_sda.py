@@ -21,9 +21,9 @@ from functools import wraps
 allowed_activations = ["sigmoid", "tanh", "relu", "softmax"]
 allowed_losses = ["rmse", "cross-entropy"]
 
-X_TRAIN_PATH = "../data/splits/XTrainSAMP.csv"
-Y_TRAIN_PATH = "../data/splits/YTrainSAMP.csv"
-X_TEST_PATH = "../data/splits/XTestSAMP.csv"
+X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+Y_TRAIN_PATH = "../data/splits/PYTrainSAM.csv"
+X_TEST_PATH = "../data/splits/PXTestSAM.csv"
 Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
 # xs_filepath = "../data/S01X.csv"
@@ -69,14 +69,10 @@ def get_next_batch(filename, batch_size):
     with open(filename, "rt") as file:
         reader = csv.reader(file)
         index = 0
-        max_index = len(reader) // 2
         this_batch = []
         for row in reader:
             this_batch.append(row)
             index += 1
-
-            if index > max_index:
-                break
 
             if index % batch_size == 0:
                 yield this_batch
@@ -145,7 +141,7 @@ class SDAutoencoder:
         """
         self.input_dim = dims[0]
         self.output_dim = dims[-1]
-        self.hidden_layers = self.create_new_layers(dims[1:-1], activations)
+        self.hidden_layers = self.create_new_layers(dims, activations)
         # self.dims = dims
         # self.activations = activations
         self.noise = noise
@@ -214,7 +210,7 @@ class SDAutoencoder:
                   "biases": tf.Variable(tf.truncated_normal([output_dim], dtype=tf.float32))}
 
         decode = {"weights": tf.transpose(encode["weights"]),
-                  "biases:": tf.Variable(tf.truncated_normal([input_dim], dtype=tf.float32))}
+                  "biases": tf.Variable(tf.truncated_normal([input_dim], dtype=tf.float32))}
 
         encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
         decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
@@ -247,7 +243,7 @@ class SDAutoencoder:
 
     def create_new_layers(self, dims, activations):
         assert set(activations + allowed_activations) == set(allowed_activations), "Incorrect activation(s) given."
-        assert len(dims) == len(activations), "Length of dims is not equal to length of activations."
+        assert len(dims) == len(activations) + 1, "Incorrect number of layers/activations."
         return [NNLayer(dims[i], dims[i + 1], activations[i]) for i in range(len(activations))]
 
     def pretrain_network(self, x_train_path, y_train_path, x_test_path):
@@ -290,6 +286,7 @@ def main():
                         loss="cross-entropy")
 
     sda.pretrain_network(X_TRAIN_PATH, Y_TRAIN_PATH, X_TEST_PATH)
+    sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
 
 
 if __name__ == "__main__":
