@@ -6,7 +6,8 @@ fileName <- args[1]
 
 print(paste("Reading", fileName))
 
-Sam <- fread(paste0("data/splits/", fileName), header = T) # remove header
+first.line <- fread(paste0("data/splits/", fileName), header = T, nrows = 2)
+Sam <- fread(paste0("data/splits/", fileName), header = T, colClasses = rep("numeric", ncol(first.line))) # remove header
 
 print("Done reading file.")
 print(typeof(Sam))
@@ -19,9 +20,10 @@ unitScale <- function(v) {
   return((v - min(v)) / (max(v) - min(v)))
 }
 
+print("Starting to scale table.")
 Sam <- Sam[, lapply(.SD, unitScale)]
 # Sam <- apply(Sam, 2, unitScale)
 write_csv(Sam, paste0("data/splits/P", fileName))
-
+print("Written to file.")
 
 
