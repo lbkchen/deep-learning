@@ -1,11 +1,12 @@
 library(rlist)
 library(mosaic)
 library(dplyr)
+library(readr)
 library(caret)
 
 args <- commandArgs(trailingOnly = TRUE)
 fileName <- args[1]
-which.variable <- args[2] # either x, y, or whole
+# which.variable <- args[2] # either x, y, or whole
 
 # fileName <- paste0("data/SAM01", argID, ".csv")
 # Sam <- read.file(fileName)
@@ -16,7 +17,8 @@ which.variable <- args[2] # either x, y, or whole
 # train.set <- fread("data/train.csv")
 # test.set <- fread("data/test.csv")
 
-Sam.xs <- read.csv(paste0("data/splits/", fileName), stringsAsFactors = F)
+Sam.xs <- read_csv(paste0("data/splits/", fileName))
+
 #Sam.ys <- read.file("data/splits/YTrainSAM.csv")
 
 ####################
@@ -193,10 +195,15 @@ scaleAndNormalize <- function(dtf) {
 #  scaleAndNormalize() %>%
 #  write.csv("data/splits/XTrainSAMP.csv", row.names=F)
 
-Sam.xs <- sapply(Sam.xs, as.numeric)
-Sam.xs <- sapply(Sam.xs, unitScale)
+#Sam.xs <- sapply(Sam.xs, as.numeric)
+#Sam.xs <- sapply(Sam.xs, unitScale)
+
+p.params <- preProcess(Sam.xs, method=c("range"))
+print(p.params)
+Sam.xs <- predict(p.params, Sam.xs)
+
 paste0("data/splits/P", fileName)
-write.csv(Sam.xs, paste0("data/splits/P", fileName), row.names=F)
+write_csv(Sam.xs, paste0("data/splits/P", fileName))
 
 # write.csv(mutate_if(mutate_if(Sam.xs, isDense90, standardize), isNotDenseOrBinary, unitScale), "data/SAMX.csv")
 #Sam.ys %>%
