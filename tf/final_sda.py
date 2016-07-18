@@ -21,11 +21,15 @@ from functools import wraps
 ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-Y_TRAIN_PATH = "../data/splits/PYTrainSAM.csv"
-X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-Y_TEST_PATH = "../data/splits/YTestSAM.csv"
+# X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+# Y_TRAIN_PATH = "../data/splits/PYTrainSAM.csv"
+# X_TEST_PATH = "../data/splits/PXTestSAM.csv"
+# Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
+X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
+Y_TRAIN_PATH = "../data/splits/small/PYTrainSAMsmall.csv"
+X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
+Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
 
 """
 ##################
@@ -122,8 +126,20 @@ class NNLayer:
 
     def encode(self, input_tensor):
         assert self.is_pretrained, "Cannot encode when not pretrained."
-        return self.activation(tf.matmul(input_tensor, self.weights) + self.biases)
+        return self.activate(tf.matmul(input_tensor, self.weights) + self.biases)
 
+    def activate(self, input_tensor, name=None):
+        if self.activation == "sigmoid":
+            return tf.nn.sigmoid(input_tensor, name=name)
+        if self.activation == "tanh":
+            return tf.nn.tanh(input_tensor, name=name)
+        if self.activation == "relu":
+            return tf.nn.relu(input_tensor, name=name)
+        if self.activation == "softmax":
+            return tf.nn.softmax(input_tensor, name=name)
+        else:
+            print("Activation function not valid. Using the identity.")
+            return input_tensor
 
 class SDAutoencoder:
     """A stacked denoising autoencoder."""
@@ -247,7 +263,7 @@ class SDAutoencoder:
         hidden_layer = self.hidden_layers[depth]
         input_dim, output_dim = hidden_layer.input_dim, hidden_layer.output_dim
 
-        x_original = tf.placeholder(tf.float32, shape=[None, input_dim])
+        x_original = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_latent = self.get_encoded_input(x_original, depth)
         x_corrupt = self.corrupt(x_latent)
 
@@ -310,13 +326,13 @@ class SDAutoencoder:
 
         print("Starting to fine tune parameters of network.")
 
-        x = tf.placeholder(tf.float32, self.input_dim)
+        x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers)) # Full depth encoding
-        W = tf.Variable(tf.truncated_normal(shape=[500, 2], stddev=0.1))  # FIXME: Make this a parameter
-        b = tf.Variable(tf.constant(0.1, shape=[2]))
+        W = tf.Variable(tf.truncated_normal(shape=[500, 1], stddev=0.1))  # FIXME: Make this a parameter
+        b = tf.Variable(tf.constant(0.1, shape=[1]))
         y_pred = tf.nn.softmax(tf.matmul(x_encoded, W) + b)
 
-        y_actual = tf.placeholder(tf.float32, [2])
+        y_actual = tf.placeholder(tf.float32, shape=[None, 1])
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy)
 
