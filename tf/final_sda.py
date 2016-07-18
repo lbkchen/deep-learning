@@ -55,7 +55,7 @@ def stopwatch(f):
 """
 
 
-def get_next_batch(filename, batch_size, skip_header=True):
+def get_batch_generator(filename, batch_size, skip_header=True):
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
 
@@ -213,7 +213,7 @@ class SDAutoencoder:
         :return:
         """
         sess = tf.Session()
-        x_test = get_next_batch(x_test_path, self.batch_size)
+        x_test = get_batch_generator(x_test_path, self.batch_size)
         x_input = tf.placeholder(tf.float32, shape=[None, input_dim])
         x_encoded = self.get_encoded_input(x_input, len(self.hidden_layers))
 
@@ -301,7 +301,7 @@ class SDAutoencoder:
     @stopwatch
     def pretrain_network(self, x_train_path):
         for i in range(len(self.hidden_layers)):
-            x_train = get_next_batch(x_train_path, self.batch_size)
+            x_train = get_batch_generator(x_train_path, self.batch_size)
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
 
     @stopwatch
@@ -320,8 +320,8 @@ class SDAutoencoder:
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy)
 
-        x_train = get_next_batch(x_train_path, self.batch_size)
-        y_train = get_next_batch(y_train_path, self.batch_size)
+        x_train = get_batch_generator(x_train_path, self.batch_size)
+        y_train = get_batch_generator(y_train_path, self.batch_size)
 
         for i in range(1000):  # FIXME: Make a parameter
             batch_xs, batch_ys = next(x_train), next(y_train)

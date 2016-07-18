@@ -24,7 +24,7 @@ sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
 sda.write_encoded_input("../data/transformed.csv", X_TEST_PATH, 784)
 ```
 
-## Current status:
+## Current status
 - (WIP) SDA implemented in final_sda.py in TensorFlow. Bugs present.
 - (To do) Enable multi-gpu support in the architecture.
 - (To do) Add compatibility for other data-loading methods
