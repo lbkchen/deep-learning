@@ -21,15 +21,15 @@ from functools import wraps
 ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
-X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-Y_TEST_PATH = "../data/splits/YTestSAM.csv"
+# X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+# Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
+# X_TEST_PATH = "../data/splits/PXTestSAM.csv"
+# Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
-# X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
-# Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
-# X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
-# Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
+X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
+Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
+X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
+Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
 
 """
 ##################
@@ -42,9 +42,9 @@ def stopwatch(f):
     """Simple decorator that prints the execution time of a function."""
 
     @wraps(f)
-    def wrapped(*args):
+    def wrapped(*args, **kwargs):
         start_time = time.time()
-        result = f(*args)
+        result = f(*args, **kwargs)
         elapsed_time = time.time() - start_time
         print("Total seconds elapsed for execution of %s:" %f, elapsed_time)
         return result
