@@ -21,15 +21,15 @@ from functools import wraps
 ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-# X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-# Y_TRAIN_PATH = "../data/splits/PYTrainSAM.csv"
-# X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-# Y_TEST_PATH = "../data/splits/YTestSAM.csv"
+X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
+X_TEST_PATH = "../data/splits/PXTestSAM.csv"
+Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
-X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
-Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
-X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
-Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
+# X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
+# Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
+# X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
+# Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
 
 """
 ##################
@@ -235,8 +235,10 @@ class SDAutoencoder:
         x_input = tf.placeholder(tf.float32, shape=[None, input_dim])
         x_encoded = self.get_encoded_input(x_input, len(self.hidden_layers))
 
+        print("Beginning to write to file.")
         for x_batch in x_test:
             self.write_data(sess.run(x_encoded, feed_dict={x_input: x_batch}), filename)
+        print("Written encoded input to file %s" % filename)
 
     # def get_encoded_input(self, input_tensor, depth):
     #     """Recursive implementation.
@@ -349,7 +351,7 @@ class SDAutoencoder:
                 batch_xs, batch_ys = next(x_train), next(y_train)
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
-                if i % 10 == 0:
+                if i % 100 == 0:
                     correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
                     print("Step %s, batch accuracy: " % i, sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
@@ -357,6 +359,8 @@ class SDAutoencoder:
             except StopIteration:
                 print("Reached the end of file used to fine-tune parameters. Completing step.")
                 break
+
+        print("Completed fine-tuning of parameters.")
 
 
 def main():
