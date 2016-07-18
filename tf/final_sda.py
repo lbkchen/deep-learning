@@ -59,7 +59,7 @@ def stopwatch(f):
 """
 
 
-def get_batch_generator(filename, batch_size, skip_header=True):  # FIXME: Standardize skip_header across program
+def get_batch_generator(filename, batch_size, skip_header=True):
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
 
@@ -83,6 +83,7 @@ def get_batch_generator(filename, batch_size, skip_header=True):  # FIXME: Stand
             if index % batch_size == 0:
                 yield this_batch
                 this_batch = []
+        yield this_batch  # FIXME: Not sure if this solves problem with cutting off data to 100s
 
 
 """
@@ -114,7 +115,6 @@ class NNLayer:
         self.biases = biases
 
     def set_wb(self, weights, biases):
-        #  FIXME: assert that first dimension of W is input_dim, 2nd is output_dim
         self.weights = weights
         self.biases = biases
 
@@ -150,7 +150,7 @@ class SDAutoencoder:
         assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
 
     def __init__(self, dims, activations, noise=0.0, loss="cross-entropy",
-                 lr=0.0001, batch_size=100, print_step=50):
+                 lr=0.0001, batch_size=100, print_step=100):
         """Initializes a Stacked Denoising Autoencoder based on the dimension of each
         layer in the neural network and the activation function of each layer. SDA only
         undergoes parameter setup at initialization. Main functions to utilize the SDA are:
@@ -222,6 +222,7 @@ class SDAutoencoder:
         with open(filename, "ab") as file:
             np.savetxt(file, data, delimiter=",")
 
+    @stopwatch
     def write_encoded_input(self, filename, x_test_path, input_dim):
         """Get encoded feature representation.
 
@@ -327,18 +328,22 @@ class SDAutoencoder:
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
 
     @stopwatch
-    def finetune_parameters(self, x_train_path, y_train_path):
+    def finetune_parameters(self, x_train_path, y_train_path, output_dim, num_steps=5000):
         sess = tf.Session()
 
         print("Starting to fine tune parameters of network.")
 
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers)) # Full depth encoding
-        W = tf.Variable(tf.truncated_normal(shape=[500, 2], stddev=0.1))  # FIXME: Make this a parameter
-        b = tf.Variable(tf.constant(0.1, shape=[2]))
+        """Note on W below: The difference between self.output_dim and output_dim is that the former
+        is the output dimension of the autoencoder stack, which is the dimension of the new feature
+        space. The latter is the dimension of the y value space for classification. Ex: If the output
+        should be binary, then the output_dim = 2."""
+        W = tf.Variable(tf.truncated_normal(shape=[self.output_dim, output_dim], stddev=0.1))
+        b = tf.Variable(tf.constant(0.1, shape=[output_dim]))
         y_pred = tf.nn.softmax(tf.matmul(x_encoded, W) + b)
 
-        y_actual = tf.placeholder(tf.float32, shape=[None, 2])
+        y_actual = tf.placeholder(tf.float32, shape=[None, output_dim])
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy)
         sess.run(tf.initialize_all_variables())
@@ -346,12 +351,12 @@ class SDAutoencoder:
         x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
         y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
 
-        for i in range(1000):  # FIXME: Make a parameter
+        for i in range(num_steps):
             try:
                 batch_xs, batch_ys = next(x_train), next(y_train)
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
-                if i % 100 == 0:
+                if i % self.print_step == 0:
                     correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
                     print("Step %s, batch accuracy: " % i, sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
@@ -370,8 +375,8 @@ def main():
                         loss="rmse")
 
     sda.pretrain_network(X_TRAIN_PATH)
-    sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
-    sda.write_encoded_input("../data/transformed.csv", X_TEST_PATH, 3997)
+    sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2)
+    sda.write_encoded_input("../data/x_test_transformed_SAM.csv", X_TEST_PATH, 3997)
 
 
 if __name__ == "__main__":
