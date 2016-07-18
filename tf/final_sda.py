@@ -27,7 +27,7 @@ ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 # Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
 X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
-Y_TRAIN_PATH = "../data/splits/small/PYTrainSAMsmall.csv"
+Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
 X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
 Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
 
@@ -59,12 +59,13 @@ def stopwatch(f):
 """
 
 
-def get_batch_generator(filename, batch_size, skip_header=True):
+def get_batch_generator(filename, batch_size, skip_header=True):  # FIXME: Standardize skip_header across program
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
 
     :param filename: A string of the file to write to.
-    :param batch_size: The number
+    :param batch_size: An int: the number of lines to include in each batch.
+    :param skip_header: If True, then skips the first line of the file.
     :return:
     """
     with open(filename, "rt") as file:
@@ -94,7 +95,7 @@ def get_batch_generator(filename, batch_size, skip_header=True):
 class NNLayer:
     """A container class to represent a hidden layer in the autoencoder network."""
 
-    def __init__(self, input_dim, output_dim, activation=lambda x: x, weights=None, biases=None):
+    def __init__(self, input_dim, output_dim, activation=None, weights=None, biases=None):
         """Initializes an NNLayer with empty weights/biases (default). Weights/biases
         are meant to be updated during pre-training with set_wb. Also has methods to
         transform an input_tensor to an encoded representation via the weights/biases
@@ -140,6 +141,7 @@ class NNLayer:
         else:
             print("Activation function not valid. Using the identity.")
             return input_tensor
+
 
 class SDAutoencoder:
     """A stacked denoising autoencoder."""
@@ -229,7 +231,7 @@ class SDAutoencoder:
         :return:
         """
         sess = tf.Session()
-        x_test = get_batch_generator(x_test_path, self.batch_size)
+        x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)
         x_input = tf.placeholder(tf.float32, shape=[None, input_dim])
         x_encoded = self.get_encoded_input(x_input, len(self.hidden_layers))
 
@@ -267,8 +269,10 @@ class SDAutoencoder:
         x_latent = self.get_encoded_input(x_original, depth)
         x_corrupt = self.corrupt(x_latent)
 
-        encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32)),
-                  "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32))}
+        encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
+                                         name="Weights_of_layer_%d" % depth),
+                  "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
+                                        name="Biases_of_layer_%d" % depth)}
 
         decode = {"weights": tf.transpose(encode["weights"]),  # Tied weights
                   "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32))}
@@ -287,7 +291,7 @@ class SDAutoencoder:
             sess.run(train_op, feed_dict={x_original: batch_x_original})
             if step % self.print_step == 0:
                 loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
-                print("Step %s, batch loss = %s" % (step, loss_value))
+                print("Step %s, batch %s loss = %s" % (step, self.loss, loss_value))
             step += 1
 
         # Set the weights and biases of pretrained hidden layer
@@ -317,7 +321,7 @@ class SDAutoencoder:
     @stopwatch
     def pretrain_network(self, x_train_path):
         for i in range(len(self.hidden_layers)):
-            x_train = get_batch_generator(x_train_path, self.batch_size)
+            x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
 
     @stopwatch
@@ -328,25 +332,31 @@ class SDAutoencoder:
 
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers)) # Full depth encoding
-        W = tf.Variable(tf.truncated_normal(shape=[500, 1], stddev=0.1))  # FIXME: Make this a parameter
-        b = tf.Variable(tf.constant(0.1, shape=[1]))
+        W = tf.Variable(tf.truncated_normal(shape=[500, 2], stddev=0.1))  # FIXME: Make this a parameter
+        b = tf.Variable(tf.constant(0.1, shape=[2]))
         y_pred = tf.nn.softmax(tf.matmul(x_encoded, W) + b)
 
-        y_actual = tf.placeholder(tf.float32, shape=[None, 1])
+        y_actual = tf.placeholder(tf.float32, shape=[None, 2])
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy)
+        sess.run(tf.initialize_all_variables())
 
-        x_train = get_batch_generator(x_train_path, self.batch_size)
-        y_train = get_batch_generator(y_train_path, self.batch_size)
+        x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
+        y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
 
         for i in range(1000):  # FIXME: Make a parameter
-            batch_xs, batch_ys = next(x_train), next(y_train)
-            sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
+            try:
+                batch_xs, batch_ys = next(x_train), next(y_train)
+                sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
-            if i % 100 == 0:
-                correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
-                accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                print("Step %s, batch accuracy: " % i, sess.run(accuracy, feed_dict={batch_xs, batch_ys}))
+                if i % 10 == 0:
+                    correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
+                    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                    print("Step %s, batch accuracy: " % i, sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
+
+            except StopIteration:
+                print("Reached the end of file used to fine-tune parameters. Completing step.")
+                break
 
 
 def main():
