@@ -4,13 +4,6 @@ Stacked Denoising Autoencoder Implementation
 Ken Chen
 """
 
-"""
-###########################
-### SETUP AND CONSTANTS ###
-###########################
-"""
-
-
 import tensorflow as tf
 import numpy as np
 import time
@@ -18,18 +11,26 @@ import csv
 from functools import wraps
 
 
+"""
+###########################
+### SETUP AND CONSTANTS ###
+###########################
+"""
+
+
 ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-# X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-# Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
-# X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-# Y_TEST_PATH = "../data/splits/YTestSAM.csv"
+X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
+X_TEST_PATH = "../data/splits/PXTestSAM.csv"
+Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
-X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
-Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
-X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
-Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
+# X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
+# Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
+# X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
+# Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
+
 
 """
 ##################
@@ -46,7 +47,7 @@ def stopwatch(f):
         start_time = time.time()
         result = f(*args, **kwargs)
         elapsed_time = time.time() - start_time
-        print("Total seconds elapsed for execution of %s:" %f, elapsed_time)
+        print("Total seconds elapsed for execution of %s:" % f, elapsed_time)
         return result
 
     return wrapped
@@ -84,13 +85,6 @@ def get_batch_generator(filename, batch_size, skip_header=True):
                 yield this_batch
                 this_batch = []
         yield this_batch  # FIXME: Not sure if this solves problem with cutting off data to 100s
-
-
-"""
-#####################################
-### STACKED DENOISING AUTOENCODER ###
-#####################################
-"""
 
 
 class NNLayer:
@@ -143,6 +137,13 @@ class NNLayer:
             return input_tensor
 
 
+"""
+#####################################
+### STACKED DENOISING AUTOENCODER ###
+#####################################
+"""
+
+
 class SDAutoencoder:
     """A stacked denoising autoencoder."""
 
@@ -172,7 +173,7 @@ class SDAutoencoder:
             sda = SDAutoencoder([784, 400, 200, 10], ["relu", "relu", "relu"], noise=0.05)
             sda.pretrain_network(X_TRAIN_PATH)
             sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
-            sda.write_encoded_input(your_filename, X_TEST_PATH, input_dim)
+            sda.write_encoded_input(your_filename, X_TEST_PATH)
 
 
         :param dims: A list of ints containing the dimensions of the x-values at each step of
@@ -223,23 +224,22 @@ class SDAutoencoder:
             np.savetxt(file, data, delimiter=",")
 
     @stopwatch
-    def write_encoded_input(self, filename, x_test_path, input_dim):
+    def write_encoded_input(self, filepath, x_test_path):
         """Get encoded feature representation.
 
-        :param filename:
+        :param filepath:
         :param x_test_path:
-        :param input_dim:
         :return:
         """
         sess = tf.Session()
         x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)
-        x_input = tf.placeholder(tf.float32, shape=[None, input_dim])
+        x_input = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_encoded = self.get_encoded_input(x_input, len(self.hidden_layers))
 
         print("Beginning to write to file.")
         for x_batch in x_test:
-            self.write_data(sess.run(x_encoded, feed_dict={x_input: x_batch}), filename)
-        print("Written encoded input to file %s" % filename)
+            self.write_data(sess.run(x_encoded, feed_dict={x_input: x_batch}), filepath)
+        print("Written encoded input to file %s" % filepath)
 
     # def get_encoded_input(self, input_tensor, depth):
     #     """Recursive implementation.
@@ -334,7 +334,8 @@ class SDAutoencoder:
         print("Starting to fine tune parameters of network.")
 
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
-        x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers)) # Full depth encoding
+        # x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers))  # Full depth encoding
+        x_encoded = x
         """Note on W below: The difference between self.output_dim and output_dim is that the former
         is the output dimension of the autoencoder stack, which is the dimension of the new feature
         space. The latter is the dimension of the y value space for classification. Ex: If the output
@@ -367,6 +368,11 @@ class SDAutoencoder:
 
         print("Completed fine-tuning of parameters.")
 
+    def save_variables(self, filepath, sess):
+        saver = tf.train.Saver()
+        save_path = saver.save(sess, filepath)
+        print("Model saved in file: %s" % save_path)
+
 
 def main():
     sda = SDAutoencoder(dims=[3997, 500, 500, 500],
@@ -374,9 +380,9 @@ def main():
                         noise=0.05,
                         loss="rmse")
 
-    sda.pretrain_network(X_TRAIN_PATH)
+    # sda.pretrain_network(X_TRAIN_PATH)
     sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2)
-    sda.write_encoded_input("../data/x_test_transformed_SAM.csv", X_TEST_PATH, 3997)
+    sda.write_encoded_input("../data/x_test_transformed_SAM.csv", X_TEST_PATH)
 
 
 if __name__ == "__main__":
