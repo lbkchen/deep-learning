@@ -18,10 +18,10 @@ sda = SDAutoencoder(dims=[784, 256, 64, 10],
 sda.pretrain_network(X_TRAIN_PATH)
 
 # Read in test y-values to softmax classifier.
-sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
+sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2)
 
 # Write to file the newly represented features.
-sda.write_encoded_input("../data/transformed.csv", X_TEST_PATH, 784)
+sda.write_encoded_input("../data/transformed.csv", X_TEST_PATH)
 ```
 
 ## Current status
