@@ -10,9 +10,9 @@ Not configured for general usage yet: currently reads train/test data from csv f
 ```python
 # Initialize an unconfigured autoencoder with specified dimensions, etc.
 sda = SDAutoencoder(dims=[784, 256, 64, 10],
-                        activations=["sigmoid", "tanh", "sigmoid"],
-                        noise=0.1,
-                        loss="cross-entropy")
+                    activations=["sigmoid", "tanh", "sigmoid"],
+                    noise=0.1,
+                    loss="cross-entropy")
 
 # Pretrain weights and biases of each layers in the network.
 sda.pretrain_network(X_TRAIN_PATH)
