@@ -107,6 +107,8 @@ class NNLayer:
         self.activation = activation
         self.weights = weights
         self.biases = biases
+        self._weights = None  # Weights Variable
+        self._biases = None  # Biases Variable
 
     def set_wb(self, weights, biases):
         self.weights = weights
@@ -115,13 +117,21 @@ class NNLayer:
         print("Set weights of layer with shape", tf.shape(weights))
         print("Set biases of layer with shape", tf.shape(weights))
 
+    def set_wb_variables(self):
+        assert self.is_pretrained, "Cannot set Variables when not pretrained."
+        self._weights = tf.Variable(self.weights, dtype=tf.float32)
+        self._biases = tf.Variable(self.biases, dtype=tf.float32)
+
     @property
     def is_pretrained(self):
         return not (self.weights is None and self.biases is None)
 
-    def encode(self, input_tensor):
+    def encode(self, input_tensor, use_variables=False):
         assert self.is_pretrained, "Cannot encode when not pretrained."
-        return self.activate(tf.matmul(input_tensor, self.weights) + self.biases)
+        if use_variables:
+            return self.activate(tf.matmul(input_tensor, self._weights) + self._biases)
+        else:
+            return self.activate(tf.matmul(input_tensor, self.weights) + self.biases)
 
     def activate(self, input_tensor, name=None):
         if self.activation == "sigmoid":
@@ -209,6 +219,10 @@ class SDAutoencoder:
             all_vars.extend(additional_vars)
         return all_vars
 
+    def setup_all_variables(self):
+        for layer in self.hidden_layers:
+            layer.set_wb_variables()
+
     def corrupt(self, tensor, corruption_level=0.5):
         """Uses the masking noise algorithm to mask corruption_level proportion
         of the input."""
@@ -269,9 +283,9 @@ class SDAutoencoder:
     #         return encoder_helper(encoded, current_depth - 1, hidden_layer_index + 1)
     #     return encoder_helper(input_tensor, depth, 0)
 
-    def get_encoded_input(self, input_tensor, depth):
+    def get_encoded_input(self, input_tensor, depth, use_variables=False):
         for i in range(depth):
-            input_tensor = self.hidden_layers[i].encode(input_tensor)
+            input_tensor = self.hidden_layers[i].encode(input_tensor, use_variables=use_variables)
         return input_tensor
 
     def pretrain_layer(self, depth, batch_generator, act=tf.nn.sigmoid):
@@ -300,10 +314,10 @@ class SDAutoencoder:
         # Reconstruction loss
         loss = self.get_loss(x_latent, decoded)
 
-        trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
+        # trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
         # Only optimize variables for this layer ("greedy")
-        train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
-        sess.run(tf.initialize_variables(trainable_vars))
+        train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
+        sess.run(tf.initialize_all_variables())
 
         step = 0
         for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
@@ -314,7 +328,7 @@ class SDAutoencoder:
             step += 1
 
         # Set the weights and biases of pretrained hidden layer
-        hidden_layer.set_wb(weights=encode["weights"], biases=encode["biases"])  # Need a feed_dict?
+        hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
 
         print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
@@ -348,9 +362,10 @@ class SDAutoencoder:
         sess = tf.Session()
 
         print("Starting to fine tune parameters of network.")
+        self.setup_all_variables()
 
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
-        x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers))  # Full depth encoding
+        x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers), use_variables=True)  # Full depth encoding
         """Note on W below: The difference between self.output_dim and output_dim is that the former
         is the output dimension of the autoencoder stack, which is the dimension of the new feature
         space. The latter is the dimension of the y value space for classification. Ex: If the output
@@ -361,9 +376,9 @@ class SDAutoencoder:
 
         y_actual = tf.placeholder(tf.float32, shape=[None, output_dim])
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
-        trainable_vars = self.get_all_variables(additional_vars=[W, b])
-        train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
-        sess.run(tf.initialize_variables(trainable_vars))
+        # trainable_vars = self.get_all_variables(additional_vars=[W, b])
+        train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy)
+        sess.run(tf.initialize_all_variables())
 
         x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
         y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
