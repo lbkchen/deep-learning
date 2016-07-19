@@ -21,15 +21,15 @@ from functools import wraps
 ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
-X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-Y_TEST_PATH = "../data/splits/YTestSAM.csv"
+# X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
+# Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
+# X_TEST_PATH = "../data/splits/PXTestSAM.csv"
+# Y_TEST_PATH = "../data/splits/YTestSAM.csv"
 
-# X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
-# Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
-# X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
-# Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
+X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
+Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
+X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
+Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
 
 
 """
@@ -200,6 +200,15 @@ class SDAutoencoder:
         print("Initialized SDA network with dims %s, noise %s, loss %s, learning rate %s, and batch_size %s."
               % (dims, self.noise, self.loss, self.lr, self.batch_size))
 
+    def get_all_variables(self, additional_vars=[]):
+        """Returns all trainable variables of the neural network."""
+        all_vars = []
+        for layer in self.hidden_layers:
+            all_vars.extend([layer.weights, layer.biases])
+        if additional_vars:
+            all_vars.extend(additional_vars)
+        return all_vars
+
     def corrupt(self, tensor, corruption_level=0.5):
         """Uses the masking noise algorithm to mask corruption_level proportion
         of the input."""
@@ -212,6 +221,11 @@ class SDAutoencoder:
         ), tf.float32)
 
         return tf.mul(tensor, corruption)
+
+    def save_variables(self, filepath, sess):
+        saver = tf.train.Saver()
+        save_path = saver.save(sess, filepath)
+        print("Model saved in file: %s" % save_path)
 
     def write_data(self, data, filename):
         """Writes data in data_tensor and appends to the end of filename in csv format
@@ -286,8 +300,10 @@ class SDAutoencoder:
         # Reconstruction loss
         loss = self.get_loss(x_latent, decoded)
 
-        train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss)
-        sess.run(tf.initialize_all_variables())
+        trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
+        # Only optimize variables for this layer ("greedy")
+        train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
+        sess.run(tf.initialize_variables(trainable_vars))
 
         step = 0
         for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
@@ -298,7 +314,7 @@ class SDAutoencoder:
             step += 1
 
         # Set the weights and biases of pretrained hidden layer
-        hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))  # Need a feed_dict?
+        hidden_layer.set_wb(weights=encode["weights"], biases=encode["biases"])  # Need a feed_dict?
 
         print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
@@ -334,8 +350,7 @@ class SDAutoencoder:
         print("Starting to fine tune parameters of network.")
 
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
-        # x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers))  # Full depth encoding
-        x_encoded = x
+        x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers))  # Full depth encoding
         """Note on W below: The difference between self.output_dim and output_dim is that the former
         is the output dimension of the autoencoder stack, which is the dimension of the new feature
         space. The latter is the dimension of the y value space for classification. Ex: If the output
@@ -346,8 +361,9 @@ class SDAutoencoder:
 
         y_actual = tf.placeholder(tf.float32, shape=[None, output_dim])
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
-        train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy)
-        sess.run(tf.initialize_all_variables())
+        trainable_vars = self.get_all_variables(additional_vars=[W, b])
+        train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
+        sess.run(tf.initialize_variables(trainable_vars))
 
         x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
         y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
@@ -368,11 +384,6 @@ class SDAutoencoder:
 
         print("Completed fine-tuning of parameters.")
 
-    def save_variables(self, filepath, sess):
-        saver = tf.train.Saver()
-        save_path = saver.save(sess, filepath)
-        print("Model saved in file: %s" % save_path)
-
 
 def main():
     sda = SDAutoencoder(dims=[3997, 500, 500, 500],
@@ -380,7 +391,7 @@ def main():
                         noise=0.05,
                         loss="rmse")
 
-    # sda.pretrain_network(X_TRAIN_PATH)
+    sda.pretrain_network(X_TRAIN_PATH)
     sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2)
     sda.write_encoded_input("../data/x_test_transformed_SAM.csv", X_TEST_PATH)
 
