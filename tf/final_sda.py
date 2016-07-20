@@ -369,7 +369,7 @@ class SDAutoencoder:
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
 
         # Try janky encoding
-        x_encoded = x
+        x_encoded = tf.identity(x)
         var_list = [[tf.Variable(layer.weights, trainable=True),
                      tf.Variable(layer.biases, trainable=True),
                      layer] for layer in self.hidden_layers]
@@ -393,6 +393,7 @@ class SDAutoencoder:
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
         sess.run(tf.initialize_all_variables())
         W_check = sess.run(W)  # remove
+        new_weight = sess.run(var_list[0][0])  # remove
 
         x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
         y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
@@ -418,6 +419,7 @@ class SDAutoencoder:
         print([var.name for var in tf.trainable_variables()])
 
         new_weight_1 = sess.run(var_list[0][0])
+        same = np.array_equal(new_weight, new_weight_1)
         W_check_again = sess.run(W)
         self.finalize_all_variables()
         print("Completed fine-tuning of parameters.")
