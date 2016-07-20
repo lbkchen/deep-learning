@@ -8,9 +8,13 @@ This project uses **Stacked Denoising Autoencoders (SDA)** [[P. Vincent]](http:/
 Not configured for general usage yet: currently reads train/test data from csv files in batch style and performs pre-training/tuning on a multi(4)-gpu system.
 
 ```python
+# Start a TensorFlow session
+sess = tf.Session()
+
 # Initialize an unconfigured autoencoder with specified dimensions, etc.
 sda = SDAutoencoder(dims=[784, 256, 64, 10],
                     activations=["sigmoid", "tanh", "sigmoid"],
+                    sess=sess, 
                     noise=0.1,
                     loss="cross-entropy")
 
