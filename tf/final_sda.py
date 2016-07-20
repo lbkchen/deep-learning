@@ -309,7 +309,8 @@ class SDAutoencoder:
                                         name="Biases_of_layer_%d" % depth)}
 
         decode = {"weights": tf.transpose(encode["weights"]),  # Tied weights
-                  "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32))}
+                  "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
+                                        name="Decode_biases_layer_%d" % depth)}
 
         encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
         decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
@@ -367,34 +368,24 @@ class SDAutoencoder:
         self.setup_all_variables()
 
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
+        x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers), use_variables=True)  # Full depth encoding
 
-        # Try janky encoding
-        x_encoded = tf.identity(x)
-        var_list = [[tf.Variable(layer.weights, trainable=True),
-                     tf.Variable(layer.biases, trainable=True),
-                     layer] for layer in self.hidden_layers]
-        layer_vars = []
-        for w, b, layer in var_list:
-            x_encoded = layer.activate(tf.matmul(x_encoded, w) + b)
-            layer_vars.extend([w, b])
-
-        # x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers), use_variables=True) # Full depth encoding
         """Note on W below: The difference between self.output_dim and output_dim is that the former
         is the output dimension of the autoencoder stack, which is the dimension of the new feature
         space. The latter is the dimension of the y value space for classification. Ex: If the output
         should be binary, then the output_dim = 2."""
         W = tf.Variable(tf.truncated_normal(shape=[self.output_dim, output_dim], stddev=0.1))
         b = tf.Variable(tf.constant(0.1, shape=[output_dim]))
-        y_pred = tf.nn.softmax(tf.matmul(x_encoded, W) + b)
-
+        y_logits = tf.matmul(x_encoded, W) + b
+        y_pred = tf.nn.softmax(y_logits)
         y_actual = tf.placeholder(tf.float32, shape=[None, output_dim])
-        cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_actual * tf.log(y_pred), reduction_indices=[1]))
-        trainable_vars = layer_vars + [W, b]
+
+        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_logits, y_actual))
+        trainable_vars = self.get_all_variables(additional_vars=[W, b])
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
         sess.run(tf.initialize_all_variables())
-        W_check = sess.run(W)  # remove
-        new_weight = sess.run(var_list[0][0])  # remove
 
+        weights_org = [sess.run(self.hidden_layers[i].get_weight_variable()) for i in range(len(self.hidden_layers))]  # debug
         x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
         y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
 
@@ -404,23 +395,20 @@ class SDAutoencoder:
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
                 if i % self.print_step == 0:
-                    print(sess.run(y_pred, feed_dict={x: batch_xs}))
                     correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
                     print("Step %s, batch accuracy: " % i, sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
 
                 if i % (self.print_step * 10) == 0:
-                    print("Predicted y values:", sess.run(y_pred, feed_dict={x: batch_xs}))
+                    print("Predicted y-values:", sess.run(y_pred, feed_dict={x : batch_xs}))
 
             except StopIteration:
                 print("Reached the end of file used to fine-tune parameters. Completing step.")
                 break
 
         print([var.name for var in tf.trainable_variables()])
-
-        new_weight_1 = sess.run(var_list[0][0])
-        same = np.array_equal(new_weight, new_weight_1)
-        W_check_again = sess.run(W)
+        weights_fin = [sess.run(self.hidden_layers[i].get_weight_variable()) for i in range(len(self.hidden_layers))]  # debug
+        same = [np.array_equal(w0, w1) for w0, w1 in zip(weights_org, weights_fin)]  # debug
         self.finalize_all_variables()
         print("Completed fine-tuning of parameters.")
 
