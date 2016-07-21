@@ -333,7 +333,7 @@ class SDAutoencoder:
 
         x_original = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_latent = self.get_encoded_input(x_original, depth, use_variables=False)
-        x_corrupt = self.corrupt(x_latent, corruption_level=0.05)
+        x_corrupt = self.corrupt(x_latent, corruption_level=self.noise)
 
         encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
                                          name="Weights_of_layer_%d" % depth),
@@ -376,7 +376,8 @@ class SDAutoencoder:
             ))  # FIXME: Check to verify correctness of math
 
     def create_new_layers(self, dims, activations):
-        """
+        """Creates and sets up template layers (un-pretrained) for the network based on dimensions
+        and activation functions.
 
         :param dims: Ex. [784, 200, 10]
         :param activations: Ex. ['relu', 'relu']
@@ -416,7 +417,6 @@ class SDAutoencoder:
         trainable_vars = self.get_all_variables(additional_vars=[W, b])
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
         sess.run(tf.initialize_all_variables())
-        w0_initial = sess.run(self.hidden_layers[0].get_weight_variable())
 
         x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
         y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
