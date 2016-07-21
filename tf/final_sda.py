@@ -90,6 +90,7 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
                 this_batch = []
         yield this_batch
 
+        print("Finished one batch iteration through %s" % filename)
         if repeat > 0:
             for item in get_batch_generator(filename, batch_size, skip_header, repeat - 1):
                 yield item
