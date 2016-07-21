@@ -84,7 +84,7 @@ def get_batch_generator(filename, batch_size, skip_header=True):
             if index % batch_size == 0:
                 yield this_batch
                 this_batch = []
-        yield this_batch  # FIXME: Not sure if this solves problem with cutting off data to 100s
+        yield this_batch
 
 
 class NNLayer:
@@ -111,6 +111,7 @@ class NNLayer:
         self._biases = None  # Biases Variable
 
     def set_wb(self, weights, biases):
+        """Used during pre-training for convenience."""
         self.weights = weights
         self.biases = biases
 
@@ -118,14 +119,21 @@ class NNLayer:
         print("Set biases of layer with shape", tf.shape(weights))
 
     def set_wb_variables(self):
+        """This function is called at the beginning of supervised fine tuning to create new
+        variables with initial values based on their static parameter counterparts. These
+        variables can then all be adjusted simultaneously during the fine tune optimization."""
         assert self.is_pretrained, "Cannot set Variables when not pretrained."
         self._weights = tf.Variable(self.weights, dtype=tf.float32)
         self._biases = tf.Variable(self.biases, dtype=tf.float32)
+        print("Created new weights and bias variables from current values.")
 
     def update_wb(self, sess):
+        """This function is called at the end of supervised fine tuning to update the static
+        weight and bias values to the newest snapshot of their dynamic variable counterparts."""
         assert self._weights is not None and self._biases is not None, "Weights and biases Variables not set."
         self.weights = sess.run(self._weights)
         self.biases = sess.run(self._biases)
+        print("Updated weights and biases with corresponding evaluated variable values.")
 
     def get_weight_variable(self):
         return self._weights
@@ -138,13 +146,16 @@ class NNLayer:
         return self.weights is not None and self.biases is not None
 
     def encode(self, input_tensor, use_variables=False):
-        assert self.is_pretrained, "Cannot encode when not pretrained."
+        """Performs this layer's encoding on the input_tensor. use_variables is set to true
+        during the fine-tuning stage, when all parameters of each layer need to be adjusted."""
+        assert self.is_pretrained, "Cannot encode when not pre-trained."
         if use_variables:
             return self.activate(tf.matmul(input_tensor, self._weights) + self._biases)
         else:
             return self.activate(tf.matmul(input_tensor, self.weights) + self.biases)
 
     def activate(self, input_tensor, name=None):
+        """Applies the activation function for this layer based on self.activation."""
         if self.activation == "sigmoid":
             return tf.nn.sigmoid(input_tensor, name=name)
         if self.activation == "tanh":
@@ -170,6 +181,7 @@ class SDAutoencoder:
 
     def check_assertions(self):
         assert 0 <= self.noise <= 1, "Invalid noise value given: %s" % self.noise
+        assert self.loss in ALLOWED_LOSSES
 
     def __init__(self, dims, activations, sess, noise=0.0, loss="cross-entropy",
                  lr=0.0001, batch_size=100, print_step=100):
@@ -223,6 +235,11 @@ class SDAutoencoder:
         print("Initialized SDA network with dims %s, noise %s, loss %s, learning rate %s, and batch_size %s."
               % (dims, self.noise, self.loss, self.lr, self.batch_size))
 
+    @property
+    def is_pretrained(self):
+        """Returns whether the whole autoencoder network (all layers) is pre-trained."""
+        return all([layer.is_pretrained for layer in self.hidden_layers])
+
     def get_all_variables(self, additional_vars=None):
         """Returns all trainable variables of the neural network."""
         all_vars = []
@@ -233,25 +250,27 @@ class SDAutoencoder:
         return all_vars
 
     def setup_all_variables(self):
+        """See NNLayer.set_wb_variables. Performs layer method on all hidden layers."""
         for layer in self.hidden_layers:
             layer.set_wb_variables()
 
     def finalize_all_variables(self):
+        """See NNLayer.finalize_all_variables. Performs layer method on all hidden layers."""
         for layer in self.hidden_layers:
             layer.update_wb(self.sess)
 
     def corrupt(self, tensor, corruption_level=0.5):
         """Uses the masking noise algorithm to mask corruption_level proportion
-        of the input."""
-        # FIXME: Currently only corrupts 50% regardless
-        corruption = tf.cast(tf.random_uniform(
-            shape=tf.shape(tensor),
-            minval=0,
-            maxval=2,
-            dtype=tf.int32
-        ), tf.float32)
+        of the input.
 
-        return tf.mul(tensor, corruption)
+        :param tensor: A tensor whose values are to be corrupted.
+        :param corruption_level: An int [0, 1] specifying the probability to corrupt each value.
+        :return: The corrupted tensor.
+        """
+        total_samples = tf.reduce_prod(tf.shape(tensor))
+        corruption_matrix = tf.multinomial(tf.log([[corruption_level, 1 - corruption_level]]), total_samples)
+        corruption_matrix = tf.cast(tf.reshape(corruption_matrix, shape=tf.shape(tensor)), dtype=tf.float32)
+        return tf.mul(tensor, corruption_matrix)
 
     def save_variables(self, filepath):
         saver = tf.train.Saver()
@@ -259,10 +278,10 @@ class SDAutoencoder:
         print("Model saved in file: %s" % save_path)
 
     def write_data(self, data, filename):
-        """Writes data in data_tensor and appends to the end of filename in csv format
+        """Writes data in data_tensor and appends to the end of filename in csv format.
 
-        :param data: A 2-dimensional numpy array
-        :param filename: A string representing the save filepath
+        :param data: A 2-dimensional numpy array.
+        :param filename: A string representing the save filepath.
         :return: None
         """
         with open(filename, "ab") as file:
@@ -270,13 +289,13 @@ class SDAutoencoder:
 
     @stopwatch
     def write_encoded_input(self, filepath, x_test_path):
-        """Get encoded feature representation.
+        """Get encoded feature representation and writes to filepath.
 
-        :param filepath:
-        :param x_test_path:
-        :return:
+        :param filepath: A string specifying the file path/name to write the encoded input to.
+        :param x_test_path: A string specifying the file path of the x test values.
+        :return: None
         """
-        sess = tf.Session()
+        sess = self.sess
         x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)
         x_input = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_encoded = self.get_encoded_input(x_input, len(self.hidden_layers), use_variables=False)
@@ -287,6 +306,19 @@ class SDAutoencoder:
         print("Written encoded input to file %s" % filepath)
 
     def get_encoded_input(self, input_tensor, depth, use_variables=False):
+        """Performs an encoding on input_tensor through the neural network depending on depth.
+        If depth is 0, then input_tensor is simply returned. If depth is 3, then input_tensor
+        will be encoded through the first three layers of the network. If depth is -1, then
+        input_tensor will be encoded through the entire network.
+
+        :param input_tensor: A tensor to encode.
+        :param depth: The number of layers through which input_tensor will be encoded. If -1,
+            then the full network encoding will be used.
+        :param use_variables: A boolean representing whether to use tf.Variable representations
+            of layer parameters. This is set to True only during the fine-tuning stage.
+        :return: The encoded input_tensor.
+        """
+        depth = len(self.hidden_layers) if depth == -1 else depth
         for i in range(depth):
             input_tensor = self.hidden_layers[i].encode(input_tensor, use_variables=use_variables)
         return input_tensor
@@ -301,7 +333,7 @@ class SDAutoencoder:
 
         x_original = tf.placeholder(tf.float32, shape=[None, self.input_dim])
         x_latent = self.get_encoded_input(x_original, depth, use_variables=False)
-        x_corrupt = self.corrupt(x_latent)
+        x_corrupt = self.corrupt(x_latent, corruption_level=0.05)
 
         encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
                                          name="Weights_of_layer_%d" % depth),
@@ -368,7 +400,7 @@ class SDAutoencoder:
         self.setup_all_variables()
 
         x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
-        x_encoded = self.get_encoded_input(x, depth=len(self.hidden_layers), use_variables=True)  # Full depth encoding
+        x_encoded = self.get_encoded_input(x, depth=-1, use_variables=True)  # Full depth encoding
 
         """Note on W below: The difference between self.output_dim and output_dim is that the former
         is the output dimension of the autoencoder stack, which is the dimension of the new feature
@@ -384,8 +416,8 @@ class SDAutoencoder:
         trainable_vars = self.get_all_variables(additional_vars=[W, b])
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
         sess.run(tf.initialize_all_variables())
+        w0_initial = sess.run(self.hidden_layers[0].get_weight_variable())
 
-        weights_org = [sess.run(self.hidden_layers[i].get_weight_variable()) for i in range(len(self.hidden_layers))]  # debug
         x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
         y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
 
@@ -397,7 +429,8 @@ class SDAutoencoder:
                 if i % self.print_step == 0:
                     correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                    print("Step %s, batch accuracy: " % i, sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
+                    print("Step %s, batch accuracy: " % i,
+                          sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
 
                 if i % (self.print_step * 10) == 0:
                     print("Predicted y-values:", sess.run(y_pred, feed_dict={x : batch_xs}))
@@ -407,8 +440,6 @@ class SDAutoencoder:
                 break
 
         print([var.name for var in tf.trainable_variables()])
-        weights_fin = [sess.run(self.hidden_layers[i].get_weight_variable()) for i in range(len(self.hidden_layers))]  # debug
-        same = [np.array_equal(w0, w1) for w0, w1 in zip(weights_org, weights_fin)]  # debug
         self.finalize_all_variables()
         print("Completed fine-tuning of parameters.")
 
