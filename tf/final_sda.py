@@ -60,15 +60,19 @@ def stopwatch(f):
 """
 
 
-def get_batch_generator(filename, batch_size, skip_header=True):
+def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
 
     :param filename: A string of the file to write to.
     :param batch_size: An int: the number of lines to include in each batch.
     :param skip_header: If True, then skips the first line of the file.
+    :param repeat: An int specifying the number of times to repeat going through
+        the file. Repeat of 2 will return a generator that iterates through the
+        full file three times before stopping iteration.
     :return:
     """
+    assert repeat < 1000, "Recursion depth will be exceeded."
     with open(filename, "rt") as file:
         reader = csv.reader(file)
 
@@ -85,6 +89,10 @@ def get_batch_generator(filename, batch_size, skip_header=True):
                 yield this_batch
                 this_batch = []
         yield this_batch
+
+        if repeat > 0:
+            for item in get_batch_generator(filename, batch_size, skip_header, repeat - 1):
+                yield item
 
 
 class NNLayer:

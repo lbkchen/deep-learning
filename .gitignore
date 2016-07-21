@@ -54,3 +54,6 @@ run_data
 
 # Exclude PyCharm
 .idea
+
+# Exclude Python stuff
+__pycache__
