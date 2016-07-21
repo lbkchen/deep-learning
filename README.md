@@ -14,11 +14,11 @@ sess = tf.Session()
 # Initialize an unconfigured autoencoder with specified dimensions, etc.
 sda = SDAutoencoder(dims=[784, 256, 64, 10],
                     activations=["sigmoid", "tanh", "sigmoid"],
-                    sess=sess, 
+                    sess=sess,
                     noise=0.1,
                     loss="cross-entropy")
 
-# Pretrain weights and biases of each layers in the network.
+# Pretrain weights and biases of each layer in the network.
 sda.pretrain_network(X_TRAIN_PATH)
 
 # Read in test y-values to softmax classifier.
