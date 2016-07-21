@@ -45,6 +45,9 @@ luac.out
 *.Rout
 data
 
+# Exclude training code
+training
+
 # Exclude MNIST stuff
 MNIST_data
 run_data
