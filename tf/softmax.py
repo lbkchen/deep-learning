@@ -61,6 +61,10 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
     for batch_xs, batch_ys in zip(x_train, y_train):
         sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
+        # Debug
+        if step == 100:
+            break
+
         # Assess training accuracy for current batch
         if step % print_step == 0:
             correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
@@ -119,6 +123,10 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
     for batch_xs, batch_ys in zip(x_test, y_test):
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs, y_actual: batch_ys}), filename=output_filepath)
 
+        # Debug
+        if step == 100:
+            break
+
         correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         accuracy_val = sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys})
@@ -126,6 +134,8 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
 
         if step % print_step == 0:
             print("Step %s, current batch testing accuracy: %s" % (step, accuracy_val))
+
+        step += 1
 
     print("Testing complete and written to %s, overall accuracy: %s" % (output_filepath, average(accuracy_history)))
 
