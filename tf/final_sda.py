@@ -30,6 +30,7 @@ X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
 Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
 X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
 Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
+ENCODED_X_PATH = "../data/x_test_transformed_SAM.csv"
 
 
 """
@@ -196,7 +197,7 @@ class SDAutoencoder:
         assert self.loss in ALLOWED_LOSSES
 
     def __init__(self, dims, activations, sess, noise=0.0, loss="cross-entropy",
-                 lr=0.0001, batch_size=100, print_step=100):
+                 lr=0.001, batch_size=100, print_step=100):
         """Initializes a Stacked Denoising Autoencoder based on the dimension of each
         layer in the neural network and the activation function of each layer. SDA only
         undergoes parameter setup at initialization. Main functions to utilize the SDA are:
@@ -219,7 +220,6 @@ class SDAutoencoder:
             sda.pretrain_network(X_TRAIN_PATH)
             sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH)
             sda.write_encoded_input(your_filename, X_TEST_PATH)
-
 
         :param dims: A list of ints containing the dimensions of the x-values at each step of
             the network. The first entry is the overall input_dim, and the last entry is the
@@ -271,7 +271,7 @@ class SDAutoencoder:
         for layer in self.hidden_layers:
             layer.update_wb(self.sess)
 
-    def corrupt(self, tensor, corruption_level=0.5):
+    def corrupt(self, tensor, corruption_level=0.05):
         """Uses the masking noise algorithm to mask corruption_level proportion
         of the input.
 
@@ -406,9 +406,11 @@ class SDAutoencoder:
 
     @stopwatch
     def pretrain_network(self, x_train_path):
+        print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
             x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
+        print("Finished pretraining of autoencoder network.")
 
     @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
@@ -457,7 +459,6 @@ class SDAutoencoder:
 
             step += 1
 
-        print([var.name for var in tf.trainable_variables()])
         self.finalize_all_variables()
         print("Completed fine-tuning of parameters.")
         return {"weights": sess.run(W), "biases": sess.run(b)}
@@ -474,7 +475,7 @@ def main():
 
     sda.pretrain_network(X_TRAIN_PATH)
     sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2)
-    sda.write_encoded_input("../data/x_test_transformed_SAM.csv", X_TEST_PATH)
+    sda.write_encoded_input(ENCODED_X_PATH, X_TEST_PATH)
 
 
 if __name__ == "__main__":
