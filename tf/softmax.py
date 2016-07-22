@@ -135,8 +135,6 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
 
         if step % print_step == 0:
             print("Step %s, current batch testing accuracy: %s" % (step, accuracy_val))
-
-        if step > 0 and step % (print_step * 10) == 0:
             print("Predicted y-values:\n", sess.run(y_pred, feed_dict={x: batch_xs}))
 
         step += 1
