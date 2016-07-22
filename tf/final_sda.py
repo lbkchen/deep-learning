@@ -24,7 +24,7 @@ ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 # X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
 # Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 # X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-# Y_TEST_PATH = "../data/splits/YTestSAM.csv"
+# Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
 Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
@@ -440,7 +440,7 @@ class SDAutoencoder:
             if step % self.print_step == 0:
                 correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                print("Step %s, batch accuracy: " % i,
+                print("Step %s, batch accuracy: " % step,
                       sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
 
             if step % (self.print_step * 10) == 0:

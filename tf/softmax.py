@@ -1,13 +1,18 @@
-from final_sda import get_batch_generator, stopwatch
+from final_sda import get_batch_generator, stopwatch, SDAutoencoder
 import tensorflow as tf
 import numpy as np
 
 
-X_TRAIN_PATH = "../data/x_train_transformed_SAM_2.csv"
+# X_TRAIN_PATH = "../data/x_train_transformed_SAM_2.csv"
+# Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
+# X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
+# Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
+OUTPUT_PATH = "../data/ip_predicted_ys_10_epoch.csv"
+
+X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
 Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
-X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
+X_TEST_PATH = "../data/splits/x_test_transformed_SAM_3.csv"
 Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
-OUTPUT_PATH = "../data/ip_predicted_ys_1_epoch.csv"
 
 
 def average(lst):
@@ -144,14 +149,22 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
 
 @stopwatch
 def main():
-    trained_parameters = train_softmax(input_dim=500,
-                                       output_dim=2,
-                                       x_train_filepath=X_TRAIN_PATH,
-                                       y_train_filepath=Y_TRAIN_PATH,
-                                       epochs=1)
+    sess = tf.Session()
+    sda = SDAutoencoder(dims=[3997, 200, 200, 200],
+                        activations=["sigmoid", "sigmoid", "sigmoid"],
+                        sess=sess,
+                        noise=0.05,
+                        loss="rmse",
+                        print_step=50)
+
+    sda.pretrain_network(X_TRAIN_PATH)
+    trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=10)
+    sda.write_encoded_input("../data/x_test_transformed_SAM_3.csv", X_TEST_PATH)
+
+    sess.close()
 
     test_model(parameters_dict=trained_parameters,
-               input_dim=500,
+               input_dim=200,
                output_dim=2,
                x_test_filepath=X_TEST_PATH,
                y_test_filepath=Y_TEST_PATH,
