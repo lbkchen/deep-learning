@@ -11,7 +11,7 @@ OUTPUT_PATH = "../data/ip_predicted_ys_10_epoch.csv"
 
 X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
 Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
-X_TEST_PATH = "../data/splits/x_test_transformed_SAM_3.csv"
+X_TEST_PATH = "../data/splits/PXTestSAM.csv"
 Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 
@@ -159,14 +159,15 @@ def main():
 
     sda.pretrain_network(X_TRAIN_PATH)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=10)
-    sda.write_encoded_input("../data/x_test_transformed_SAM_3.csv", X_TEST_PATH)
+    transformed_filepath = "../data/x_test_transformed_SAM_3.csv"
+    sda.write_encoded_input(transformed_filepath, X_TEST_PATH)
 
     sess.close()
 
     test_model(parameters_dict=trained_parameters,
                input_dim=200,
                output_dim=2,
-               x_test_filepath=X_TEST_PATH,
+               x_test_filepath=transformed_filepath,
                y_test_filepath=Y_TEST_PATH,
                output_filepath=OUTPUT_PATH)
 

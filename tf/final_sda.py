@@ -370,6 +370,11 @@ class SDAutoencoder:
         step = 0
         for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
             sess.run(train_op, feed_dict={x_original: batch_x_original})
+
+            # Debug: remove
+            # if step >= 50:
+            #     break
+
             if step % self.print_step == 0:
                 loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
                 print("Step %s, batch %s loss = %s" % (step, self.loss, loss_value))
@@ -436,6 +441,10 @@ class SDAutoencoder:
         step = 0
         for batch_xs, batch_ys in zip(x_train, y_train):
             sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
+
+            # Debug: remove
+            # if step >= 50:
+            #     break
 
             if step % self.print_step == 0:
                 correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
