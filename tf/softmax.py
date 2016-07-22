@@ -38,7 +38,7 @@ def write_data(data, filename):  # FIXME: Copied from sda, should refactor to st
 
 
 @stopwatch
-def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=0.0001, batch_size=100,
+def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=0.001, batch_size=100,
                   print_step=50, epochs=1):
     """Trains a softmax model for prediction."""
     # Model input and parameters
