@@ -12,4 +12,15 @@ test_y
 
 Take train_x dataset [~750000, 3997] and train_y [~750000, 3]
 
+Files:
 
+- x_test_transformed_SAM_3.csv:
+	Transformed x testing data with 10 epoch trial, learning rate 0.0001 (probs too low). Dim
+	parameters [3997, 200, 200, 200].
+- ip_predicted_ys_10_epoch.csv:
+	Predicted y one-hots from 10 epoch trial (same as x_test_transformed_SAM_3.csv above)
+
+- x_test_transformed_SAM_4.csv:
+	Transformed x testing data with 20 epoch trial, learning rate 0.001, same dims as before.
+- ip_predicted_ys_20_epoch.csv:
+	Predicted y one-hots from 20 epoch trial (same trial as above)
