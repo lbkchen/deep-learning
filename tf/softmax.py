@@ -1,13 +1,14 @@
-import tf.final_sda as sda
+from final_sda import get_batch_generator, stopwatch
 import tensorflow as tf
 import numpy as np
 
 
 X_TRAIN_PATH = "../data/x_train_transformed_SAM_2.csv"
-Y_TRAIN_PATH = "../data/presplits/YTrainSAMP.csv"
+Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
-Y_TEST_PATH = "../data/presplits/YTestSAMP.csv"
+Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 OUTPUT_PATH = "../data/ip_predicted_ys.csv"
+
 
 def average(lst):
     return sum(lst) / len(lst)
@@ -31,7 +32,7 @@ def write_data(data, filename):  # FIXME: Copied from sda, should refactor to st
         np.savetxt(file, data, delimiter=",")
 
 
-@sda.stopwatch
+@stopwatch
 def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=0.0001, batch_size=100,
                   print_step=50, epochs=1):
     """Trains a softmax model for prediction."""
@@ -52,18 +53,18 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
     # Start session and run batches based on number of epochs
     sess = tf.Session()
     sess.run(tf.initialize_all_variables())
-    x_train = sda.get_batch_generator(filename=x_train_filepath, batch_size=batch_size,
-                                      skip_header=False, repeat=epochs - 1)
-    y_train = sda.get_batch_generator(filename=y_train_filepath, batch_size=batch_size,
-                                      skip_header=True, repeat=epochs - 1)
+    x_train = get_batch_generator(filename=x_train_filepath, batch_size=batch_size,
+                                  skip_header=False, repeat=epochs - 1)
+    y_train = get_batch_generator(filename=y_train_filepath, batch_size=batch_size,
+                                  skip_header=True, repeat=epochs - 1)
     step = 0
     accuracy_history = []
     for batch_xs, batch_ys in zip(x_train, y_train):
         sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
         # Debug
-        if step == 100:
-            break
+        # if step == 100:
+        #     break
 
         # Assess training accuracy for current batch
         if step % print_step == 0:
@@ -90,7 +91,7 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
     return parameters_dict
 
 
-@sda.stopwatch
+@stopwatch
 def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_filepath, output_filepath,
                batch_size=100, print_step=100):
     """
@@ -116,16 +117,16 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
 
     # Evaluate testing accuracy
     sess = tf.Session()
-    x_test = sda.get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
-    y_test = sda.get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)
+    x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
+    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)
     step = 0
     accuracy_history = []
     for batch_xs, batch_ys in zip(x_test, y_test):
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs, y_actual: batch_ys}), filename=output_filepath)
 
         # Debug
-        if step == 100:
-            break
+        # if step == 100:
+        #     break
 
         correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -139,7 +140,8 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
 
     print("Testing complete and written to %s, overall accuracy: %s" % (output_filepath, average(accuracy_history)))
 
-@sda.stopwatch
+
+@stopwatch
 def main():
     trained_parameters = train_softmax(input_dim=500,
                                        output_dim=2,
