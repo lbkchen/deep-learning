@@ -89,6 +89,7 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
                 yield this_batch
                 this_batch = []
 
+        # Catch any remainders in current data set
         if this_batch:
             yield this_batch
 
@@ -405,7 +406,7 @@ class SDAutoencoder:
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
 
     @stopwatch
-    def finetune_parameters(self, x_train_path, y_train_path, output_dim, num_steps=5000):
+    def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
         sess = self.sess
 
         print("Starting to fine tune parameters of network.")
@@ -429,31 +430,28 @@ class SDAutoencoder:
         train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
         sess.run(tf.initialize_all_variables())
 
-        x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
-        y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True)
+        x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+        y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
 
-        for i in range(num_steps):
-            try:
-                batch_xs, batch_ys = next(x_train), next(y_train)
-                sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
+        step = 0
+        for batch_xs, batch_ys in zip(x_train, y_train):
+            sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
-                if i % self.print_step == 0:
-                    correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
-                    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                    print("Step %s, batch accuracy: " % i,
-                          sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
+            if step % self.print_step == 0:
+                correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
+                accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                print("Step %s, batch accuracy: " % i,
+                      sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
 
-                if i % (self.print_step * 10) == 0:
-                    print("Predicted y-values:", sess.run(y_pred, feed_dict={x : batch_xs}))
+            if step % (self.print_step * 10) == 0:
+                print("Predicted y-values:", sess.run(y_pred, feed_dict={x: batch_xs}))
 
-            except StopIteration:
-                print("Reached the end of file used to fine-tune parameters. Completing step.")
-                break
+            step += 1
 
         print([var.name for var in tf.trainable_variables()])
         self.finalize_all_variables()
         print("Completed fine-tuning of parameters.")
-
+        return {"weights": sess.run(W), "biases": sess.run(b)}
 
 
 def main():
