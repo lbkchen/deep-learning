@@ -88,9 +88,11 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
             if index % batch_size == 0:
                 yield this_batch
                 this_batch = []
-        yield this_batch
 
-        print("Finished one batch iteration through %s" % filename)
+        if this_batch:
+            yield this_batch
+
+        print("Finished a batch iteration through %s" % filename)
         if repeat > 0:
             for item in get_batch_generator(filename, batch_size, skip_header, repeat - 1):
                 yield item
@@ -451,6 +453,7 @@ class SDAutoencoder:
         print([var.name for var in tf.trainable_variables()])
         self.finalize_all_variables()
         print("Completed fine-tuning of parameters.")
+
 
 
 def main():

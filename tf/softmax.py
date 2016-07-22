@@ -7,7 +7,7 @@ X_TRAIN_PATH = "../data/x_train_transformed_SAM_2.csv"
 Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
 Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
-OUTPUT_PATH = "../data/ip_predicted_ys.csv"
+OUTPUT_PATH = "../data/ip_predicted_ys_1_epoch.csv"
 
 
 def average(lst):
@@ -77,7 +77,7 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
         # Assess training accuracy for last 10 batches
         if step > 0 and step % (print_step * 10) == 0:
             print("Predicted y-values:\n", sess.run(y_pred, feed_dict={x: batch_xs}))
-            print("Overall batch training accuracy for steps %s to %s: %s" % (step - 10 * batch_size,
+            print("Overall batch training accuracy for steps %s to %s: %s" % (step - 10 * print_step,
                                                                               step,
                                                                               average(accuracy_history)))
 
@@ -87,7 +87,7 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
         "weights": sess.run(weights),
         "biases": sess.run(biases)
     }
-
+    sess.close()
     return parameters_dict
 
 
@@ -122,7 +122,7 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
     step = 0
     accuracy_history = []
     for batch_xs, batch_ys in zip(x_test, y_test):
-        write_data(data=sess.run(y_pred, feed_dict={x: batch_xs, y_actual: batch_ys}), filename=output_filepath)
+        write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
         # Debug
         # if step == 100:
@@ -136,8 +136,11 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
         if step % print_step == 0:
             print("Step %s, current batch testing accuracy: %s" % (step, accuracy_val))
 
-        step += 1
+        if step > 0 and step % (print_step * 10) == 0:
+            print("Predicted y-values:\n", sess.run(y_pred, feed_dict={x: batch_xs}))
 
+        step += 1
+    sess.close()
     print("Testing complete and written to %s, overall accuracy: %s" % (output_filepath, average(accuracy_history)))
 
 
@@ -147,7 +150,7 @@ def main():
                                        output_dim=2,
                                        x_train_filepath=X_TRAIN_PATH,
                                        y_train_filepath=Y_TRAIN_PATH,
-                                       epochs=2)
+                                       epochs=1)
 
     test_model(parameters_dict=trained_parameters,
                input_dim=500,
