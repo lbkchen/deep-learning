@@ -286,7 +286,7 @@ class SDAutoencoder:
         save_path = saver.save(self.sess, filepath)
         print("Model saved in file: %s" % save_path)
 
-    def write_data(self, data, filename):
+    def write_data(self, data, filename):  # FIXME: Should be a static function and outside of class
         """Writes data in data_tensor and appends to the end of filename in csv format.
 
         :param data: A 2-dimensional numpy array.
