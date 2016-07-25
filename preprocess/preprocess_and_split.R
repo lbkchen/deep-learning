@@ -50,6 +50,16 @@ print(str(Sam))
 # print(str(Sam.maxs))
 # print(sum(Sam.maxs==0))
 
+# Change y values of IP/ED to 1/0 depending on return or not (binarize)
+Sam$ED_YTM <- ifelse(Sam$ED_YTM > 0, 1, 0)
+Sam$IP_YTM <- ifelse(Sam$IP_YTM > 0, 1, 0)
+
+# Change all necessary columns to factors to prevent scaling and 
+# to assure SMOTE works
+Sam$StatePatientID <- as.factor(Sam$StatePatientID)
+Sam$ED_YTM <- as.factor(Sam$ED_YTM)
+Sam$IP_YTM <- as.factor(Sam$IP_YTM)
+
 # Scale all columns of Sam
 print("Starting to scale table.")
 Sam <- Sam[, lapply(.SD, unitScale)]
