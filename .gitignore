@@ -44,6 +44,7 @@ luac.out
 .Rhistory
 *.Rout
 data
+logs
 
 # Exclude training code
 training
