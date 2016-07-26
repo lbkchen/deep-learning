@@ -109,17 +109,24 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
                 yield item
 
 
-def variable_summaries(var, name):
+def attach_variable_summaries(var, name, summ_list):
     """Attach statistical summaries to a tensor for tensorboard visualization."""
     with tf.name_scope("summaries"):
         mean = tf.reduce_mean(var)
-        tf.scalar_summary("mean/" + name, mean)
+        summ_mean = tf.scalar_summary("mean/" + name, mean)
         with tf.name_scope('stddev'):
             stddev = tf.sqrt(tf.reduce_sum(tf.square(tf.sub(var, mean))))
-        tf.scalar_summary('stddev/' + name, stddev)
-        tf.scalar_summary('max/' + name, tf.reduce_max(var))
-        tf.scalar_summary('min/' + name, tf.reduce_min(var))
-        tf.histogram_summary(name, var)
+        summ_std = tf.scalar_summary('stddev/' + name, stddev)
+        summ_max = tf.scalar_summary('max/' + name, tf.reduce_max(var))
+        summ_min = tf.scalar_summary('min/' + name, tf.reduce_min(var))
+        summ_hist = tf.histogram_summary(name, var)
+    summ_list.extend([summ_mean, summ_std, summ_max, summ_min, summ_hist])
+
+
+def attach_scalar_summary(var, name, summ_list):
+    """Attach scalar summaries to a scalar."""
+    summ = tf.scalar_summary(tags=name, values=var)
+    summ_list.append(summ)
 
 
 class NNLayer:
@@ -154,7 +161,7 @@ class NNLayer:
         print("Set weights of layer with shape", tf.shape(weights))
         print("Set biases of layer with shape", tf.shape(weights))
 
-    def set_wb_variables(self):
+    def set_wb_variables(self, summ_list):
         """This function is called at the beginning of supervised fine tuning to create new
         variables with initial values based on their static parameter counterparts. These
         variables can then all be adjusted simultaneously during the fine tune optimization."""
@@ -162,8 +169,8 @@ class NNLayer:
         with tf.name_scope("finetune_vars/" + self.name):
             self._weights = tf.Variable(self.weights, dtype=tf.float32, name="weights")
             self._biases = tf.Variable(self.biases, dtype=tf.float32, name="biases")
-            variable_summaries(self._weights, name=self._weights.name)
-            variable_summaries(self._biases, name=self._biases.name)
+            attach_variable_summaries(self._weights, name=self._weights.name, summ_list=summ_list)
+            attach_variable_summaries(self._biases, name=self._biases.name, summ_list=summ_list)
         print("Created new weights and bias variables from current values.")
 
     def update_wb(self, sess):
@@ -287,10 +294,10 @@ class SDAutoencoder:
             all_vars.extend(additional_vars)
         return all_vars
 
-    def setup_all_variables(self):
+    def setup_all_variables(self, summ_list):
         """See NNLayer.set_wb_variables. Performs layer method on all hidden layers."""
         for layer in self.hidden_layers:
-            layer.set_wb_variables()
+            layer.set_wb_variables(summ_list)
 
     def finalize_all_variables(self):
         """See NNLayer.finalize_all_variables. Performs layer method on all hidden layers."""
@@ -367,6 +374,7 @@ class SDAutoencoder:
 
         print("Starting to pretrain layer %d." % depth)
         hidden_layer = self.hidden_layers[depth]
+        summary_list = []
 
         with tf.name_scope(hidden_layer.name):
             input_dim, output_dim = hidden_layer.input_dim, hidden_layer.output_dim
@@ -383,8 +391,8 @@ class SDAutoencoder:
                     "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
                                           name="Biases_of_layer_%d" % depth)
                 }
-                variable_summaries(encode["weights"], encode["weights"].name)
-                variable_summaries(encode["biases"], encode["biases"].name)
+                attach_variable_summaries(encode["weights"], encode["weights"].name, summ_list=summary_list)
+                attach_variable_summaries(encode["biases"], encode["biases"].name, summ_list=summary_list)
 
             with tf.name_scope("decoding_vars/" + hidden_layer.name):
                 decode = {
@@ -393,19 +401,19 @@ class SDAutoencoder:
                     "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
                                           name="Decode_biases_layer_%d" % depth)
                 }
-                variable_summaries(decode["weights"], decode["weights"].name)
-                variable_summaries(decode["biases"], decode["biases"].name)
+                attach_variable_summaries(decode["weights"], decode["weights"].name, summ_list=summary_list)
+                attach_variable_summaries(decode["biases"], decode["biases"].name, summ_list=summary_list)
 
             with tf.name_scope("encoded_and_decoded/" + hidden_layer.name):
                 encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])  # FIXME: Need some histogram summaries?
                 decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
-                variable_summaries(encoded, "encoded/" + hidden_layer.name)
-                variable_summaries(decoded, "decoded/" + hidden_layer.name)
+                attach_variable_summaries(encoded, "encoded/" + hidden_layer.name, summ_list=summary_list)
+                attach_variable_summaries(decoded, "decoded/" + hidden_layer.name, summ_list=summary_list)
 
             # Reconstruction loss
             with tf.name_scope("reconstruction_loss/" + hidden_layer.name):
                 loss = self.get_loss(x_latent, decoded)
-                tf.scalar_summary("%s_loss/%s" % (self.loss, hidden_layer.name), loss)
+                attach_scalar_summary(loss, "%s_loss/%s" % (self.loss, hidden_layer.name), summ_list=summary_list)
 
             trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
             # Only optimize variables for this layer ("greedy")
@@ -414,7 +422,7 @@ class SDAutoencoder:
             sess.run(tf.initialize_all_variables())
 
             # Merge summaries and get a summary writer
-            merged = tf.merge_all_summaries()
+            merged = tf.merge_summary(summary_list)
             pretrain_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/" + hidden_layer.name, sess.graph)
 
             step = 0
@@ -475,10 +483,11 @@ class SDAutoencoder:
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
         sess = tf.Session()
         self.sess = sess
+        summary_list = []
 
         print("Starting to fine tune parameters of network.")
         with tf.name_scope("finetuning"):
-            self.setup_all_variables()
+            self.setup_all_variables(summary_list)
 
             with tf.name_scope("inputs"):
                 x = tf.placeholder(tf.float32, shape=[None, self.input_dim], name="raw_input")
@@ -492,21 +501,21 @@ class SDAutoencoder:
             with tf.name_scope("softmax_variables"):
                 W = tf.Variable(tf.truncated_normal(shape=[self.output_dim, output_dim], stddev=0.1), name="weights")
                 b = tf.Variable(tf.constant(0.1, shape=[output_dim]), name="biases")
-                variable_summaries(W, W.name)
-                variable_summaries(b, b.name)
+                attach_variable_summaries(W, W.name, summ_list=summary_list)
+                attach_variable_summaries(b, b.name, summ_list=summary_list)
 
             with tf.name_scope("outputs"):
                 y_logits = tf.matmul(x_encoded, W) + b
                 with tf.name_scope("predicted"):
                     y_pred = tf.nn.softmax(y_logits, name="y_pred")
-                    variable_summaries(y_pred, y_pred.name)
+                    attach_variable_summaries(y_pred, y_pred.name, summ_list=summary_list)
                 with tf.name_scope("actual"):
                     y_actual = tf.placeholder(tf.float32, shape=[None, output_dim], name="y_actual")
-                    variable_summaries(y_actual, y_actual.name)
+                    attach_variable_summaries(y_actual, y_actual.name, summ_list=summary_list)
 
             with tf.name_scope("cross_entropy"):
                 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_logits, y_actual))
-                tf.scalar_summary("cross_entropy", cross_entropy)
+                attach_scalar_summary(cross_entropy, "cross_entopy", summ_list=summary_list)
 
             trainable_vars = self.get_all_variables(additional_vars=[W, b])
             with tf.name_scope("train_step"):
@@ -516,7 +525,7 @@ class SDAutoencoder:
             with tf.name_scope("evaluation"):
                 correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                tf.scalar_summary("finetune_accuracy", accuracy)
+                attach_scalar_summary(accuracy, "finetune_accuracy", summ_list=summary_list)
 
             sess.run(tf.initialize_all_variables())
 
@@ -524,7 +533,7 @@ class SDAutoencoder:
             y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
 
             # Merge summaries and get a summary writer
-            merged = tf.merge_all_summaries()
+            merged = tf.merge_summary(summary_list)
             train_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/finetune", sess.graph)
 
             step = 0
