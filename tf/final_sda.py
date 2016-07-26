@@ -32,6 +32,8 @@ X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
 Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
 ENCODED_X_PATH = "../data/x_test_transformed_SAM.csv"
 
+TENSORBOARD_LOGDIR = "../logs/tensorboard"
+
 
 """
 ##################

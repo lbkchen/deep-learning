@@ -89,9 +89,12 @@ print("Finished splitting into train and test sets.")
 print("Beginning to apply ROSE algorithm.")
 result_sample_size <- 200000
 rare_proportion <- 0.5
+# Sam.train.without_factors <- Sam.train[, !c("StatePatientID", "ED_YTM"), with = FALSE]
+# Sam.train.factors <- Sam.train[, c("StatePatientID", "ED_YTM"), with = FALSE]
 Sam.train <- ovun.sample(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
-                         method = "both", N = result_sample_size, p = rare_proportion)
-print("Beginning to apply ROSE algorithm.")
+                         method = "both", N = result_sample_size, p = rare_proportion)$data
+Sam.train <- data.table(Sam.train)
+print("Finished applying ROSE algorithm.")
 
 # Split into train.x, train.y, test.x, test.y
 print("Begin split into x/y.")
