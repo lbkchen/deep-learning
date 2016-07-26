@@ -166,7 +166,7 @@ class NNLayer:
         variables with initial values based on their static parameter counterparts. These
         variables can then all be adjusted simultaneously during the fine tune optimization."""
         assert self.is_pretrained, "Cannot set Variables when not pretrained."
-        with tf.name_scope("finetune_vars/" + self.name):
+        with tf.name_scope(self.name):
             self._weights = tf.Variable(self.weights, dtype=tf.float32, name="weights")
             self._biases = tf.Variable(self.biases, dtype=tf.float32, name="biases")
             attach_variable_summaries(self._weights, name=self._weights.name, summ_list=summ_list)
@@ -378,45 +378,45 @@ class SDAutoencoder:
         with tf.name_scope(hidden_layer.name):
             input_dim, output_dim = hidden_layer.input_dim, hidden_layer.output_dim
 
-            with tf.name_scope("x_values/" + hidden_layer.name):
+            with tf.name_scope("x_values"):
                 x_original = tf.placeholder(tf.float32, shape=[None, self.input_dim])
                 x_latent = self.get_encoded_input(x_original, depth, use_variables=False)
                 x_corrupt = self.corrupt(x_latent, corruption_level=self.noise)
 
-            with tf.name_scope("encoding_vars/" + hidden_layer.name):
+            with tf.name_scope("encoding_vars"):
                 encode = {
                     "weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
-                                           name="Weights_of_layer_%d" % depth),
+                                           name="weights"),
                     "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
-                                          name="Biases_of_layer_%d" % depth)
+                                          name="biases")
                 }
                 attach_variable_summaries(encode["weights"], encode["weights"].name, summ_list=summary_list)
                 attach_variable_summaries(encode["biases"], encode["biases"].name, summ_list=summary_list)
 
-            with tf.name_scope("decoding_vars/" + hidden_layer.name):
+            with tf.name_scope("decoding_vars"):
                 decode = {
                     "weights": tf.transpose(encode["weights"],
-                                            name="Transposed_weights_layer_%d" % depth),  # Tied weights
+                                            name="transposed_weights"),  # Tied weights
                     "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
-                                          name="Decode_biases_layer_%d" % depth)
+                                          name="decode_biases")
                 }
                 attach_variable_summaries(decode["weights"], decode["weights"].name, summ_list=summary_list)
                 attach_variable_summaries(decode["biases"], decode["biases"].name, summ_list=summary_list)
 
-            with tf.name_scope("encoded_and_decoded/" + hidden_layer.name):
+            with tf.name_scope("encoded_and_decoded"):
                 encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])  # FIXME: Need some histogram summaries?
                 decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
-                attach_variable_summaries(encoded, "encoded/" + hidden_layer.name, summ_list=summary_list)
-                attach_variable_summaries(decoded, "decoded/" + hidden_layer.name, summ_list=summary_list)
+                attach_variable_summaries(encoded, "encoded", summ_list=summary_list)
+                attach_variable_summaries(decoded, "decoded", summ_list=summary_list)
 
             # Reconstruction loss
-            with tf.name_scope("reconstruction_loss/" + hidden_layer.name):
+            with tf.name_scope("reconstruction_loss"):
                 loss = self.get_loss(x_latent, decoded)
-                attach_scalar_summary(loss, "%s_loss/%s" % (self.loss, hidden_layer.name), summ_list=summary_list)
+                attach_scalar_summary(loss, "%s_loss" % self.loss, summ_list=summary_list)
 
             trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
             # Only optimize variables for this layer ("greedy")
-            with tf.name_scope("train_step/" + hidden_layer.name):
+            with tf.name_scope("train_step"):
                 train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
             sess.run(tf.initialize_all_variables())
 
