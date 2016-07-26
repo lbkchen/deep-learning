@@ -261,7 +261,7 @@ class SDAutoencoder:
         self.input_dim = dims[0]
         self.output_dim = dims[-1]
         self.hidden_layers = self.create_new_layers(dims, activations)
-        self.sess = sess
+        self.sess = None
 
         self.noise = noise
         self.loss = loss
@@ -362,8 +362,8 @@ class SDAutoencoder:
         return input_tensor
 
     def pretrain_layer(self, depth, batch_generator, act=tf.nn.sigmoid):
-        sess = self.sess
         sess = tf.Session()
+        self.sess = sess
 
         print("Starting to pretrain layer %d." % depth)
         hidden_layer = self.hidden_layers[depth]
@@ -471,8 +471,8 @@ class SDAutoencoder:
 
     @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
-        sess = self.sess
         sess = tf.Session()
+        self.sess = sess
 
         print("Starting to fine tune parameters of network.")
         with tf.name_scope("finetuning"):
