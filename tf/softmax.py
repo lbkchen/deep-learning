@@ -7,12 +7,12 @@ import numpy as np
 # Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 # X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
-OUTPUT_PATH = "../data/ip_predicted_ys_20_epoch.csv"
+OUTPUT_PATH = "../data/ip_predicted_ys_20_epoch_rose.csv"
 
-X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
-X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
+X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
+Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
+X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
+Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
 
 
 def average(lst):
@@ -159,7 +159,7 @@ def main():
 
     sda.pretrain_network(X_TRAIN_PATH)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=20)
-    transformed_filepath = "../data/x_test_transformed_SAM_4.csv"
+    transformed_filepath = "../data/x_test_transformed_SAM_5.csv"
     sda.write_encoded_input(transformed_filepath, X_TEST_PATH)
 
     sess.close()
