@@ -102,10 +102,23 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
                 yield item
 
 
+def variable_summaries(var, name):
+    """Attach statistical summaries to a tensor for tensorboard visualization."""
+    with tf.name_scope("summaries"):
+        mean = tf.reduce_mean(var)
+        tf.scalar_summary("mean/" + name, mean)
+        with tf.name_scope('stddev'):
+            stddev = tf.sqrt(tf.reduce_sum(tf.square(var - mean)))
+        tf.scalar_summary('stddev/' + name, stddev)
+        tf.scalar_summary('max/' + name, tf.reduce_max(var))
+        tf.scalar_summary('min/' + name, tf.reduce_min(var))
+        tf.histogram_summary(name, var)
+
+
 class NNLayer:
     """A container class to represent a hidden layer in the autoencoder network."""
 
-    def __init__(self, input_dim, output_dim, activation=None, weights=None, biases=None):
+    def __init__(self, input_dim, output_dim, name="hidden_layer", activation=None, weights=None, biases=None):
         """Initializes an NNLayer with empty weights/biases (default). Weights/biases
         are meant to be updated during pre-training with set_wb. Also has methods to
         transform an input_tensor to an encoded representation via the weights/biases
@@ -119,6 +132,7 @@ class NNLayer:
         """
         self.input_dim = input_dim
         self.output_dim = output_dim
+        self.name = name
         self.activation = activation
         self.weights = weights
         self.biases = biases
@@ -341,50 +355,58 @@ class SDAutoencoder:
         sess = self.sess
 
         print("Starting to pretrain layer %d." % depth)
-
         hidden_layer = self.hidden_layers[depth]
-        input_dim, output_dim = hidden_layer.input_dim, hidden_layer.output_dim
 
-        x_original = tf.placeholder(tf.float32, shape=[None, self.input_dim])
-        x_latent = self.get_encoded_input(x_original, depth, use_variables=False)
-        x_corrupt = self.corrupt(x_latent, corruption_level=self.noise)
+        with tf.name_scope(hidden_layer.name):
+            input_dim, output_dim = hidden_layer.input_dim, hidden_layer.output_dim
 
-        encode = {"weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
-                                         name="Weights_of_layer_%d" % depth),
-                  "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
-                                        name="Biases_of_layer_%d" % depth)}
+            with tf.name_scope("x_values/" + hidden_layer.name):
+                x_original = tf.placeholder(tf.float32, shape=[None, self.input_dim])
+                x_latent = self.get_encoded_input(x_original, depth, use_variables=False)
+                x_corrupt = self.corrupt(x_latent, corruption_level=self.noise)
 
-        decode = {"weights": tf.transpose(encode["weights"]),  # Tied weights
-                  "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
-                                        name="Decode_biases_layer_%d" % depth)}
+            with tf.name_scope("encoding_vars/" + hidden_layer.name):
+                encode = {"weights": tf.Variable(
+                    tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
+                    name="Weights_of_layer_%d" % depth
+                ),
+                          "biases": tf.Variable(
+                              tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
+                              name="Biases_of_layer_%d" % depth)}
+                variable_summaries(encode["weights"], encode["weights"].name)
+                variable_summaries(encode["biases"], encode["biases"].name)
 
-        encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
-        decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
+            decode = {"weights": tf.transpose(encode["weights"]),  # Tied weights
+                      "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
+                                            name="Decode_biases_layer_%d" % depth)}
 
-        # Reconstruction loss
-        loss = self.get_loss(x_latent, decoded)
+            encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
+            decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
 
-        trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
-        # Only optimize variables for this layer ("greedy")
-        train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
-        sess.run(tf.initialize_all_variables())
+            # Reconstruction loss
+            loss = self.get_loss(x_latent, decoded)
 
-        step = 0
-        for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
-            sess.run(train_op, feed_dict={x_original: batch_x_original})
+            trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
+            # Only optimize variables for this layer ("greedy")
+            train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
+            sess.run(tf.initialize_all_variables())
 
-            # Debug: remove
-            # if step >= 50:
-            #     break
+            step = 0
+            for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
+                sess.run(train_op, feed_dict={x_original: batch_x_original})
 
-            if step % self.print_step == 0:
-                loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
-                print("Step %s, batch %s loss = %s" % (step, self.loss, loss_value))
-            step += 1
+                # Debug: remove
+                # if step >= 50:
+                #     break
 
-        # Set the weights and biases of pretrained hidden layer
-        hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
-        print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
+                if step % self.print_step == 0:
+                    loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
+                    print("Step %s, batch %s loss = %s" % (step, self.loss, loss_value))
+                step += 1
+
+            # Set the weights and biases of pretrained hidden layer
+            hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
+            print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
     def get_loss(self, tensor_1, tensor_2):
         if self.loss == "rmse":
@@ -404,7 +426,8 @@ class SDAutoencoder:
         """
         assert set(activations + ALLOWED_ACTIVATIONS) == set(ALLOWED_ACTIVATIONS), "Incorrect activation(s) given."
         assert len(dims) == len(activations) + 1, "Incorrect number of layers/activations."
-        return [NNLayer(dims[i], dims[i + 1], activations[i]) for i in range(len(activations))]
+        return [NNLayer(dims[i], dims[i + 1], "hidden_layer_" + str(i), activations[i])
+                for i in range(len(activations))]
 
     @stopwatch
     def pretrain_network(self, x_train_path):
