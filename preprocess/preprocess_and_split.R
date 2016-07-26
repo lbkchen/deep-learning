@@ -36,6 +36,9 @@ is.zero <- function(v) {
 }
 
 unitScale <- function(v) {
+  if (is.factor(v)) {
+    return(v)
+  }
   range <- max(v) - min(v)
   if (range == 0) {
     return(0)
