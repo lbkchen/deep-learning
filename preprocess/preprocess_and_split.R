@@ -1,6 +1,7 @@
 library(data.table) # Must have data.table v1.9.7+
 library(readr)
 library(DMwR)
+library(ROSE)
 
 # Parse command line arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -77,12 +78,20 @@ print("Finished splitting into train and test sets.")
 
 # SMOTE algorithm for balancing training data by interpolated over/undersampling
 # Smote parameters
-print("Beginning to apply SMOTE algorithm.")
-percent_to_oversample <- 500
-percent_ratio_major_to_minor <- 100
-Sam.train <- SMOTE(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
-                   perc.over = percent_to_oversample, perc.under = percent_ratio_major_to_minor)
-print("Finished applying SMOTE algorithm.")
+# print("Beginning to apply SMOTE algorithm.")
+# percent_to_oversample <- 500
+# percent_ratio_major_to_minor <- 100
+# Sam.train <- SMOTE(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
+#                    perc.over = percent_to_oversample, perc.under = percent_ratio_major_to_minor)
+# print("Finished applying SMOTE algorithm.")
+
+# ROSE algorithm for balancing training data by over/undersampling
+print("Beginning to apply ROSE algorithm.")
+result_sample_size <- 200000
+rare_proportion <- 0.5
+Sam.train <- ovun.sample(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
+                         method = "both", N = result_sample_size, p = rare_proportion)
+print("Beginning to apply ROSE algorithm.")
 
 # Split into train.x, train.y, test.x, test.y
 print("Begin split into x/y.")
@@ -97,10 +106,10 @@ print("Finished split into x/y.")
 # Write all splits to file
 print("Begin write to file.")
 base_name <- "SAMPart01"
-fwrite(Sam.train.x, paste0(base_name, "_train_x", ".csv"))
-fwrite(Sam.train.y, paste0(base_name, "_train_y", ".csv"))
-fwrite(Sam.test.x, paste0(base_name, "_test_x", ".csv"))
-fwrite(Sam.test.y, paste0(base_name, "_test_y", ".csv"))
+fwrite(Sam.train.x, paste0(base_name, "_train_x_r", ".csv"))
+fwrite(Sam.train.y, paste0(base_name, "_train_y_r", ".csv"))
+fwrite(Sam.test.x, paste0(base_name, "_test_x_r", ".csv"))
+fwrite(Sam.test.y, paste0(base_name, "_test_y_r", ".csv"))
 print("Finished write to file.")
 
 # Remove all columns with all zero entries 
