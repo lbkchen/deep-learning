@@ -26,13 +26,20 @@ ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 # X_TEST_PATH = "../data/splits/PXTestSAM.csv"
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
-X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
-Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
-X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
-Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
-ENCODED_X_PATH = "../data/x_test_transformed_SAM.csv"
+# X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
+# Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
+# X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
+# Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
+# ENCODED_X_PATH = "../data/x_test_transformed_SAM.csv"
+
+X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
+Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
+X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
+Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
+ENCODED_X_PATH = "../data/x_test_new_rose.csv"
 
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
+TENSORBOARD_LOG_STEP = 10
 
 
 """
@@ -108,7 +115,7 @@ def variable_summaries(var, name):
         mean = tf.reduce_mean(var)
         tf.scalar_summary("mean/" + name, mean)
         with tf.name_scope('stddev'):
-            stddev = tf.sqrt(tf.reduce_sum(tf.square(var - mean)))
+            stddev = tf.sqrt(tf.reduce_sum(tf.square(tf.sub(var, mean))))
         tf.scalar_summary('stddev/' + name, stddev)
         tf.scalar_summary('max/' + name, tf.reduce_max(var))
         tf.scalar_summary('min/' + name, tf.reduce_min(var))
@@ -152,8 +159,11 @@ class NNLayer:
         variables with initial values based on their static parameter counterparts. These
         variables can then all be adjusted simultaneously during the fine tune optimization."""
         assert self.is_pretrained, "Cannot set Variables when not pretrained."
-        self._weights = tf.Variable(self.weights, dtype=tf.float32)
-        self._biases = tf.Variable(self.biases, dtype=tf.float32)
+        with tf.name_scope("finetune_vars/" + self.name):
+            self._weights = tf.Variable(self.weights, dtype=tf.float32, name="weights")
+            self._biases = tf.Variable(self.biases, dtype=tf.float32, name="biases")
+            variable_summaries(self._weights, name=self._weights.name)
+            variable_summaries(self._biases, name=self._biases.name)
         print("Created new weights and bias variables from current values.")
 
     def update_wb(self, sess):
@@ -366,30 +376,45 @@ class SDAutoencoder:
                 x_corrupt = self.corrupt(x_latent, corruption_level=self.noise)
 
             with tf.name_scope("encoding_vars/" + hidden_layer.name):
-                encode = {"weights": tf.Variable(
-                    tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
-                    name="Weights_of_layer_%d" % depth
-                ),
-                          "biases": tf.Variable(
-                              tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
-                              name="Biases_of_layer_%d" % depth)}
+                encode = {
+                    "weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
+                                           name="Weights_of_layer_%d" % depth),
+                    "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
+                                          name="Biases_of_layer_%d" % depth)
+                }
                 variable_summaries(encode["weights"], encode["weights"].name)
                 variable_summaries(encode["biases"], encode["biases"].name)
 
-            decode = {"weights": tf.transpose(encode["weights"]),  # Tied weights
-                      "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
-                                            name="Decode_biases_layer_%d" % depth)}
+            with tf.name_scope("decoding_vars/" + hidden_layer.name):
+                decode = {
+                    "weights": tf.transpose(encode["weights"],
+                                            name="Transposed_weights_layer_%d" % depth),  # Tied weights
+                    "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
+                                          name="Decode_biases_layer_%d" % depth)
+                }
+                variable_summaries(decode["weights"], decode["weights"].name)
+                variable_summaries(decode["biases"], decode["biases"].name)
 
-            encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
-            decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
+            with tf.name_scope("encoded_and_decoded/" + hidden_layer.name):
+                encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])  # FIXME: Need some histogram summaries?
+                decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
+                tf.scalar_summary("encoded/" + hidden_layer.name, encoded)
+                tf.scalar_summary("decoded/" + hidden_layer.name, decoded)
 
             # Reconstruction loss
-            loss = self.get_loss(x_latent, decoded)
+            with tf.name_scope("reconstruction_loss/" + hidden_layer.name):
+                loss = self.get_loss(x_latent, decoded)
+                tf.scalar_summary("%s_loss/%s" % (self.loss, hidden_layer.name), loss)
 
             trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
             # Only optimize variables for this layer ("greedy")
-            train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
+            with tf.name_scope("train_step/" + hidden_layer.name):
+                train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
             sess.run(tf.initialize_all_variables())
+
+            # Merge summaries and get a summary writer
+            merged = tf.merge_all_summaries()
+            pretrain_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train", sess.graph)
 
             step = 0
             for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
@@ -402,6 +427,11 @@ class SDAutoencoder:
                 if step % self.print_step == 0:
                     loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
                     print("Step %s, batch %s loss = %s" % (step, self.loss, loss_value))
+
+                if step % TENSORBOARD_LOG_STEP == 0:
+                    summary = sess.run(merged, feed_dict={x_original: batch_x_original})
+                    pretrain_writer.add_summary(summary, global_step=step)
+
                 step += 1
 
             # Set the weights and biases of pretrained hidden layer
@@ -442,51 +472,78 @@ class SDAutoencoder:
         sess = self.sess
 
         print("Starting to fine tune parameters of network.")
-        self.setup_all_variables()
+        with tf.name_scope("finetuning"):
+            self.setup_all_variables()
 
-        x = tf.placeholder(tf.float32, shape=[None, self.input_dim])
-        x_encoded = self.get_encoded_input(x, depth=-1, use_variables=True)  # Full depth encoding
+            with tf.name_scope("inputs"):
+                x = tf.placeholder(tf.float32, shape=[None, self.input_dim], name="raw_input")
+                with tf.name_scope("fully_encoded"):
+                    x_encoded = self.get_encoded_input(x, depth=-1, use_variables=True)  # Full depth encoding
 
-        """Note on W below: The difference between self.output_dim and output_dim is that the former
-        is the output dimension of the autoencoder stack, which is the dimension of the new feature
-        space. The latter is the dimension of the y value space for classification. Ex: If the output
-        should be binary, then the output_dim = 2."""
-        W = tf.Variable(tf.truncated_normal(shape=[self.output_dim, output_dim], stddev=0.1))
-        b = tf.Variable(tf.constant(0.1, shape=[output_dim]))
-        y_logits = tf.matmul(x_encoded, W) + b
-        y_pred = tf.nn.softmax(y_logits)
-        y_actual = tf.placeholder(tf.float32, shape=[None, output_dim])
+            """Note on W below: The difference between self.output_dim and output_dim is that the former
+            is the output dimension of the autoencoder stack, which is the dimension of the new feature
+            space. The latter is the dimension of the y value space for classification. Ex: If the output
+            should be binary, then the output_dim = 2."""
+            with tf.name_scope("softmax_variables"):
+                W = tf.Variable(tf.truncated_normal(shape=[self.output_dim, output_dim], stddev=0.1), name="weights")
+                b = tf.Variable(tf.constant(0.1, shape=[output_dim]), name="biases")
 
-        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_logits, y_actual))
-        trainable_vars = self.get_all_variables(additional_vars=[W, b])
-        train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(cross_entropy, var_list=trainable_vars)
-        sess.run(tf.initialize_all_variables())
+            with tf.name_scope("outputs"):
+                y_logits = tf.matmul(x_encoded, W) + b
+                with tf.name_scope("predicted"):
+                    y_pred = tf.nn.softmax(y_logits, name="y_pred")
+                    tf.scalar_summary(y_pred.name, y_pred)
+                with tf.name_scope("actual"):
+                    y_actual = tf.placeholder(tf.float32, shape=[None, output_dim], name="y_actual")
+                    tf.scalar_summary(y_actual.name, y_actual)
 
-        x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
-        y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+            with tf.name_scope("cross_entropy"):
+                cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_logits, y_actual))
+                tf.scalar_summary("cross_entropy", cross_entropy)
 
-        step = 0
-        for batch_xs, batch_ys in zip(x_train, y_train):
-            sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
+            trainable_vars = self.get_all_variables(additional_vars=[W, b])
+            with tf.name_scope("train_step"):
+                train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(
+                    cross_entropy, var_list=trainable_vars)
 
-            # Debug: remove
-            # if step >= 50:
-            #     break
-
-            if step % self.print_step == 0:
+            with tf.name_scope("evaluation"):
                 correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
                 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                print("Step %s, batch accuracy: " % step,
-                      sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
+                tf.scalar_summary("finetune_accuracy", accuracy)
 
-            if step % (self.print_step * 10) == 0:
-                print("Predicted y-values:", sess.run(y_pred, feed_dict={x: batch_xs}))
+            sess.run(tf.initialize_all_variables())
 
-            step += 1
+            x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+            y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
 
-        self.finalize_all_variables()
-        print("Completed fine-tuning of parameters.")
-        return {"weights": sess.run(W), "biases": sess.run(b)}
+            # Merge summaries and get a summary writer
+            merged = tf.merge_all_summaries()
+            train_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train", sess.graph)
+
+            step = 0
+            for batch_xs, batch_ys in zip(x_train, y_train):
+                sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
+
+                # Debug: remove
+                # if step >= 50:
+                #     break
+
+                if step % self.print_step == 0:
+                    print("Step %s, batch accuracy: " % step,
+                          sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
+
+                if step % (self.print_step * 10) == 0:
+                    print("Predicted y-values:", sess.run(y_pred, feed_dict={x: batch_xs}))
+
+                if step % TENSORBOARD_LOG_STEP == 0:
+                    summary = sess.run(merged, feed_dict={x: batch_xs, y_actual: batch_ys})
+                    train_writer.add_summary(summary, global_step=step)
+
+                step += 1
+
+            self.finalize_all_variables()
+            print("Completed fine-tuning of parameters.")
+            return {"weights": sess.run(W), "biases": sess.run(b)}
 
 
 def main():
