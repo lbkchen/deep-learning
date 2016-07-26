@@ -438,6 +438,8 @@ class SDAutoencoder:
             # Set the weights and biases of pretrained hidden layer
             hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
+            pretrain_writer.flush()
+            pretrain_writer.close()
             sess.close()
 
     def get_loss(self, tensor_1, tensor_2):
@@ -549,6 +551,8 @@ class SDAutoencoder:
             self.finalize_all_variables()
             print("Completed fine-tuning of parameters.")
             tuned_params = {"weights": sess.run(W), "biases": sess.run(b)}
+            train_writer.flush()
+            train_writer.close()
             sess.close()
             return tuned_params
 

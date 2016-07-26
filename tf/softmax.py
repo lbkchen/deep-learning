@@ -149,10 +149,10 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
 
 @stopwatch
 def main():
-    sess = tf.Session()
+    # sess = tf.Session()
     sda = SDAutoencoder(dims=[3997, 200, 200, 200],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
-                        sess=sess,
+                        sess=None,
                         noise=0.05,
                         loss="rmse",
                         print_step=50)
@@ -162,7 +162,7 @@ def main():
     transformed_filepath = "../data/x_test_transformed_SAM_5.csv"
     sda.write_encoded_input(transformed_filepath, X_TEST_PATH)
 
-    sess.close()
+    # sess.close()
 
     test_model(parameters_dict=trained_parameters,
                input_dim=200,
