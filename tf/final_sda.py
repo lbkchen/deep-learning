@@ -268,7 +268,7 @@ class SDAutoencoder:
         self.input_dim = dims[0]
         self.output_dim = dims[-1]
         self.hidden_layers = self.create_new_layers(dims, activations)
-        self.sess = None
+        self.sess = sess
 
         self.noise = noise
         self.loss = loss
@@ -369,8 +369,7 @@ class SDAutoencoder:
         return input_tensor
 
     def pretrain_layer(self, depth, batch_generator, act=tf.nn.sigmoid):
-        sess = tf.Session()
-        self.sess = sess
+        sess = self.sess
 
         print("Starting to pretrain layer %d." % depth)
         hidden_layer = self.hidden_layers[depth]
@@ -446,9 +445,8 @@ class SDAutoencoder:
             # Set the weights and biases of pretrained hidden layer
             hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
-            pretrain_writer.flush()
-            pretrain_writer.close()
-            sess.close()
+            # pretrain_writer.flush()
+            # pretrain_writer.close()
 
     def get_loss(self, tensor_1, tensor_2):
         if self.loss == "rmse":
@@ -481,8 +479,7 @@ class SDAutoencoder:
 
     @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
-        sess = tf.Session()
-        self.sess = sess
+        sess = self.sess
         summary_list = []
 
         print("Starting to fine tune parameters of network.")
@@ -560,9 +557,8 @@ class SDAutoencoder:
             self.finalize_all_variables()
             print("Completed fine-tuning of parameters.")
             tuned_params = {"weights": sess.run(W), "biases": sess.run(b)}
-            train_writer.flush()
-            train_writer.close()
-            sess.close()
+            # train_writer.flush()
+            # train_writer.close()
             return tuned_params
 
 

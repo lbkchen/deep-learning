@@ -96,6 +96,11 @@ Sam.train <- ovun.sample(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train,
 Sam.train <- data.table(Sam.train)
 print("Finished applying ROSE algorithm.")
 
+# Shuffle train data to homogenize 0/1 y values
+print("Begin shuffle.")
+Sam.train <- Sam.train[sample(nrow(Sam.train)),]
+print("Finished shuffle.")
+
 # Split into train.x, train.y, test.x, test.y
 print("Begin split into x/y.")
 Sam.train.x <- Sam.train[, !c("StatePatientID", "ED_YTM", "IP_YTM"), with = FALSE]
@@ -105,6 +110,14 @@ Sam.test.x <- Sam.test[, !c("StatePatientID", "ED_YTM", "IP_YTM"), with = FALSE]
 Sam.test.y <- Sam.test[, c("IP_YTM"), with = FALSE]
 rm(Sam.test)
 print("Finished split into x/y.")
+
+# Change y to one-hot
+Sam.train.y[, zero := 1 - IP_YTM]
+Sam.train.y[, one := IP_YTM]
+Sam.train.y[, IP_YTM := NULL]
+Sam.test.y[, zero := 1 - IP_YTM]
+Sam.test.y[, one := IP_YTM]
+Sam.test.y[, IP_YTM := NULL]
 
 # Write all splits to file
 print("Begin write to file.")
