@@ -363,6 +363,7 @@ class SDAutoencoder:
 
     def pretrain_layer(self, depth, batch_generator, act=tf.nn.sigmoid):
         sess = self.sess
+        sess = tf.Session()
 
         print("Starting to pretrain layer %d." % depth)
         hidden_layer = self.hidden_layers[depth]
@@ -398,8 +399,8 @@ class SDAutoencoder:
             with tf.name_scope("encoded_and_decoded/" + hidden_layer.name):
                 encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])  # FIXME: Need some histogram summaries?
                 decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
-                tf.scalar_summary("encoded/" + hidden_layer.name, encoded)
-                tf.scalar_summary("decoded/" + hidden_layer.name, decoded)
+                variable_summaries(encoded, "encoded/" + hidden_layer.name)
+                variable_summaries(decoded, "decoded/" + hidden_layer.name)
 
             # Reconstruction loss
             with tf.name_scope("reconstruction_loss/" + hidden_layer.name):
@@ -414,7 +415,7 @@ class SDAutoencoder:
 
             # Merge summaries and get a summary writer
             merged = tf.merge_all_summaries()
-            pretrain_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train", sess.graph)
+            pretrain_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/" + hidden_layer.name, sess.graph)
 
             step = 0
             for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
@@ -437,6 +438,7 @@ class SDAutoencoder:
             # Set the weights and biases of pretrained hidden layer
             hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
+            sess.close()
 
     def get_loss(self, tensor_1, tensor_2):
         if self.loss == "rmse":
@@ -470,6 +472,7 @@ class SDAutoencoder:
     @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
         sess = self.sess
+        sess = tf.Session()
 
         print("Starting to fine tune parameters of network.")
         with tf.name_scope("finetuning"):
@@ -487,15 +490,17 @@ class SDAutoencoder:
             with tf.name_scope("softmax_variables"):
                 W = tf.Variable(tf.truncated_normal(shape=[self.output_dim, output_dim], stddev=0.1), name="weights")
                 b = tf.Variable(tf.constant(0.1, shape=[output_dim]), name="biases")
+                variable_summaries(W, W.name)
+                variable_summaries(b, b.name)
 
             with tf.name_scope("outputs"):
                 y_logits = tf.matmul(x_encoded, W) + b
                 with tf.name_scope("predicted"):
                     y_pred = tf.nn.softmax(y_logits, name="y_pred")
-                    tf.scalar_summary(y_pred.name, y_pred)
+                    variable_summaries(y_pred, y_pred.name)
                 with tf.name_scope("actual"):
                     y_actual = tf.placeholder(tf.float32, shape=[None, output_dim], name="y_actual")
-                    tf.scalar_summary(y_actual.name, y_actual)
+                    variable_summaries(y_actual, y_actual.name)
 
             with tf.name_scope("cross_entropy"):
                 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_logits, y_actual))
@@ -518,7 +523,7 @@ class SDAutoencoder:
 
             # Merge summaries and get a summary writer
             merged = tf.merge_all_summaries()
-            train_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train", sess.graph)
+            train_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/finetune", sess.graph)
 
             step = 0
             for batch_xs, batch_ys in zip(x_train, y_train):
@@ -543,7 +548,9 @@ class SDAutoencoder:
 
             self.finalize_all_variables()
             print("Completed fine-tuning of parameters.")
-            return {"weights": sess.run(W), "biases": sess.run(b)}
+            tuned_params = {"weights": sess.run(W), "biases": sess.run(b)}
+            sess.close()
+            return tuned_params
 
 
 def main():
