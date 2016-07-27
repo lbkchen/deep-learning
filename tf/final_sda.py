@@ -469,6 +469,23 @@ class SDAutoencoder:
         return [NNLayer(dims[i], dims[i + 1], "hidden_layer_" + str(i), activations[i])
                 for i in range(len(activations))]
 
+    def pretrain_network_from_file(self, x_train_path, epochs=1):
+        pass
+
+    def pretrain_network_gen(self, x_train_f, epochs=1):
+        """
+
+        :param x_train_f: A function that when called with no arguments, returns a generator that
+            iterates through the x-train values.
+        :param epochs:
+        :return:
+        """
+        print("Starting to pretrain autoencoder network.")
+        for i in range(len(self.hidden_layers)):
+            x_train = x_train_f()
+            self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
+        print("Finished pretraining of autoencoder network.")
+
     @stopwatch
     def pretrain_network(self, x_train_path, epochs=1):
         print("Starting to pretrain autoencoder network.")

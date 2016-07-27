@@ -7,7 +7,7 @@ import numpy as np
 # Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 # X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
-OUTPUT_PATH = "../data/ip_predicted_ys_20_epoch_rose.csv"
+OUTPUT_PATH = "../data/ip_predicted_ys_50_epoch_rose.csv"
 
 X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
 Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
