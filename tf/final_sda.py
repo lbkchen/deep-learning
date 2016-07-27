@@ -470,10 +470,10 @@ class SDAutoencoder:
                 for i in range(len(activations))]
 
     @stopwatch
-    def pretrain_network(self, x_train_path):
+    def pretrain_network(self, x_train_path, epochs=1):
         print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
-            x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True)
+            x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs-1)
             self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
         print("Finished pretraining of autoencoder network.")
 

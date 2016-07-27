@@ -157,8 +157,8 @@ def main():
                         loss="rmse",
                         print_step=50)
 
-    sda.pretrain_network(X_TRAIN_PATH)
-    trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=20)
+    sda.pretrain_network(X_TRAIN_PATH, epochs=10)
+    trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=50)
     transformed_filepath = "../data/x_test_transformed_SAM_5.csv"
     sda.write_encoded_input(transformed_filepath, X_TEST_PATH)
 
