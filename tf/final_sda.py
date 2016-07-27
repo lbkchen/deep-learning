@@ -90,7 +90,7 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
             next(reader)
 
         index = 0
-        this_batch = []  # FIXME: Can probably optimize to take numpy array
+        this_batch = []
         for row in reader:
             this_batch.append(row)
             index += 1
@@ -107,6 +107,27 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
         if repeat > 0:
             for item in get_batch_generator(filename, batch_size, skip_header, repeat - 1):
                 yield item
+
+
+def repeat_generator(f_gen, multiple=2):
+    """Repeats a generator.
+
+    :param f_gen: A function that when called with no arguments returns a generator
+        to be repeated.
+    :param multiple: The number of times the generator should be iterated through.
+    :return: A generator that iterates through the original generator `multiple`
+    number of times.
+    """
+    for _ in range(multiple):
+        gen = f_gen()
+        for item in gen:
+            yield item
+
+
+def merge_generators(gen_1, gen_2):
+    """Returns a generator that yields combined tuples of the results of `gen_1` and `gen_2`."""
+    for x, y in zip(gen_1, gen_2):
+        yield x, y
 
 
 def attach_variable_summaries(var, name, summ_list):
@@ -334,21 +355,43 @@ class SDAutoencoder:
 
     @stopwatch
     def write_encoded_input(self, filepath, x_test_path):
+        x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)
+        self.write_encoded_input_gen(filepath, x_test_gen=x_test)
+
+    @stopwatch
+    def write_encoded_input_gen(self, filepath, x_test_gen):
         """Get encoded feature representation and writes to filepath.
 
         :param filepath: A string specifying the file path/name to write the encoded input to.
-        :param x_test_path: A string specifying the file path of the x test values.
+        :param x_test_gen: A generator that iterates through the x-test values.
         :return: None
         """
         sess = self.sess
-        x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)
         x_input = tf.placeholder(tf.float32, shape=[None, self.input_dim])
-        x_encoded = self.get_encoded_input(x_input, len(self.hidden_layers), use_variables=False)
+        x_encoded = self.get_encoded_input(x_input, depth=-1, use_variables=False)
 
         print("Beginning to write to file.")
-        for x_batch in x_test:
+        for x_batch in x_test_gen:
             self.write_data(sess.run(x_encoded, feed_dict={x_input: x_batch}), filepath)
         print("Written encoded input to file %s" % filepath)
+
+    def write_encoded_input_with_ys(self, filepath_x, filepath_y, xy_test_gen):
+        """For use in testing MNIST.
+
+        :param filepath_x:
+        :param filepath_y:
+        :param xy_test_gen:
+        :return:
+        """
+        sess = self.sess
+        x_input = tf.placeholder(tf.float32, shape=[None, self.input_dim])
+        x_encoded = self.get_encoded_input(x_input, depth=-1, use_variables=False)
+
+        print("Beginning to write to file encoded x with ys.")
+        for x_batch, y_batch in xy_test_gen:
+            self.write_data(sess.run(x_encoded, feed_dict={x_input: x_batch}), filepath_x)
+            self.write_data(y_batch, filepath_y)
+        print("Written encoded input to file %s and test ys to %s" % (filepath_x, filepath_y))
 
     def get_encoded_input(self, input_tensor, depth, use_variables=False):
         """Performs an encoding on input_tensor through the neural network depending on depth.
@@ -445,8 +488,6 @@ class SDAutoencoder:
             # Set the weights and biases of pretrained hidden layer
             hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
-            # pretrain_writer.flush()
-            # pretrain_writer.close()
 
     def get_loss(self, tensor_1, tensor_2):
         if self.loss == "rmse":
@@ -469,21 +510,17 @@ class SDAutoencoder:
         return [NNLayer(dims[i], dims[i + 1], "hidden_layer_" + str(i), activations[i])
                 for i in range(len(activations))]
 
-    def pretrain_network_from_file(self, x_train_path, epochs=1):
-        pass
+    @stopwatch
+    def pretrain_network_gen(self, x_train_gen):
+        """Pretrains the network with a generator supplying input. Use for testing MNIST.
 
-    def pretrain_network_gen(self, x_train_f, epochs=1):
-        """
-
-        :param x_train_f: A function that when called with no arguments, returns a generator that
-            iterates through the x-train values.
-        :param epochs:
-        :return:
+        :param x_train_gen: A generator that iterates through the x-train values for however
+            many times necessary.
+        :return: None
         """
         print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
-            x_train = x_train_f()
-            self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
+            self.pretrain_layer(i, x_train_gen, act=tf.nn.sigmoid)
         print("Finished pretraining of autoencoder network.")
 
     @stopwatch
@@ -496,6 +533,13 @@ class SDAutoencoder:
 
     @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
+        x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+        y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+        xy_train = merge_generators(x_train, y_train)
+        return self.finetune_parameters_gen(xy_train_gen=xy_train, output_dim=output_dim)
+
+    @stopwatch
+    def finetune_parameters_gen(self, xy_train_gen, output_dim):
         sess = self.sess
         summary_list = []
 
@@ -543,15 +587,15 @@ class SDAutoencoder:
 
             sess.run(tf.initialize_all_variables())
 
-            x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
-            y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+            # x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+            # y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
 
             # Merge summaries and get a summary writer
             merged = tf.merge_summary(summary_list)
             train_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/finetune", sess.graph)
 
             step = 0
-            for batch_xs, batch_ys in zip(x_train, y_train):
+            for batch_xs, batch_ys in xy_train_gen:
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
 
                 # Debug: remove
@@ -574,8 +618,7 @@ class SDAutoencoder:
             self.finalize_all_variables()
             print("Completed fine-tuning of parameters.")
             tuned_params = {"weights": sess.run(W), "biases": sess.run(b)}
-            # train_writer.flush()
-            # train_writer.close()
+
             return tuned_params
 
 

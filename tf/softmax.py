@@ -1,4 +1,4 @@
-from final_sda import get_batch_generator, stopwatch, SDAutoencoder
+from final_sda import get_batch_generator, merge_generators, stopwatch, SDAutoencoder
 import tensorflow as tf
 import numpy as np
 
@@ -99,6 +99,14 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
 @stopwatch
 def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_filepath, output_filepath,
                batch_size=100, print_step=100):
+    x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
+    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)
+    xy_test_gen = merge_generators(x_test, y_test)
+    test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_filepath, print_step)
+
+
+@stopwatch
+def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_filepath, print_step=100):
     """
 
     :param parameters_dict: Must contain keys 'weights' and 'biases' with their respective values
@@ -122,11 +130,11 @@ def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_f
 
     # Evaluate testing accuracy
     sess = tf.Session()
-    x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
-    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)
+    # x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
+    # y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)
     step = 0
     accuracy_history = []
-    for batch_xs, batch_ys in zip(x_test, y_test):
+    for batch_xs, batch_ys in xy_test_gen:
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
         # Debug
