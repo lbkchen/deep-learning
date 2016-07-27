@@ -112,10 +112,10 @@ rm(Sam.test)
 print("Finished split into x/y.")
 
 # Change y to one-hot
-Sam.train.y[, zero := 1 - IP_YTM]
+Sam.train.y[, zero := ifelse(IP_YTM == 0, 1, 0)]
 Sam.train.y[, one := IP_YTM]
 Sam.train.y[, IP_YTM := NULL]
-Sam.test.y[, zero := 1 - IP_YTM]
+Sam.test.y[, zero := ifelse(IP_YTM == 0, 1, 0)]
 Sam.test.y[, one := IP_YTM]
 Sam.test.y[, IP_YTM := NULL]
 
