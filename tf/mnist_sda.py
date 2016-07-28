@@ -6,7 +6,6 @@ from final_sda import get_batch_generator, SDAutoencoder
 from softmax import test_model_gen, test_model
 from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
-import numpy as np
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 
@@ -20,36 +19,9 @@ def get_mnist_batch_generator(is_train, batch_size, batch_limit=100):
             yield mnist.test.next_batch(batch_size)
 
 
-# def get_mnist_batch_generators(batch_limit=100):
-#     both_gen = get_mnist_batch_generator(batch_limit)
-#     current_batch = next(both_gen)
-#     x_retrieved = False
-#     y_retrieved = False
-#
-#     def refresh():
-#         nonlocal current_batch, x_retrieved, y_retrieved
-#         if x_retrieved and y_retrieved:
-#             current_batch = next(both_gen)
-#             x_retrieved = False
-#             y_retrieved = False
-#
-#     def get_x_batch_generator():
-#         nonlocal x_retrieved
-#         refresh()
-#         x_retrieved = True
-#         yield current_batch[0]
-#
-#     def get_y_batch_generator():
-#         nonlocal y_retrieved
-#         refresh()
-#         y_retrieved = True
-#         yield current_batch[1]
-#
-#     return get_x_batch_generator, get_y_batch_generator
-
 def main():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[784, 80, 80, 80],
+    sda = SDAutoencoder(dims=[784, 400, 200, 80],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.05,

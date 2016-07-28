@@ -148,7 +148,7 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
 
         if step % print_step == 0:
             print("Step %s, current batch testing accuracy: %s" % (step, accuracy_val))
-            print("Predicted y-values:\n", sess.run(y_pred, feed_dict={x: batch_xs}))
+            # print("Predicted y-values:\n", sess.run(y_pred, feed_dict={x: batch_xs}))
 
         step += 1
     sess.close()

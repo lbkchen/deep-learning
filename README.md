@@ -9,7 +9,7 @@ During unsupervised pre-training, parameters in the neural network are learned a
 Following this configuration, the input data can be read into the model and encoded into a different representation depending on the user's desired parameters (layer dimensions, activations, noise level, etc.). For example, this technique can be used to transform a sparse feature space of 30000 dimensions into a dense feature space of 400 dimensions as a primer for better training performance.
 
 ## Usage
-Currently reads train/test data from csv files in batch style. The following three datasets must be present for the SDA to output newly learned features:
+The current working source code is located in `tf/final_sda.py`. Currently reads train/test data from csv files in batch style. The following three datasets must be present for the SDA to output newly learned features:
 - X training values
 - Y training values
 - X testing values
@@ -25,25 +25,42 @@ In the future, a version of the program will be constructed to be optimized on a
 sess = tf.Session()
 
 # Initialize an unconfigured autoencoder with specified dimensions, etc.
-sda = SDAutoencoder(dims=[784, 256, 64, 10],
+sda = SDAutoencoder(dims=[784, 256, 64, 32],
                     activations=["sigmoid", "tanh", "sigmoid"],
                     sess=sess,
                     noise=0.1,
-                    loss="cross-entropy")
+                    loss="rmse")
 
 # Pretrain weights and biases of each layer in the network.
 sda.pretrain_network(X_TRAIN_PATH)
 
 # Read in test y-values to softmax classifier.
-sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2)
+sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=10)
 
 # Write to file the newly represented features.
 sda.write_encoded_input(filepath="../data/transformed.csv", X_TEST_PATH)
 ```
 
+For an example of how training is performed and subsequent accuracy is evaluated, a basic procedure is implemented on the MNIST data set in `tf/mnist_sda.py`.
+
+## Performance
+Testing on the MNIST data set, the softmax classifier on top of features extracted from the deep feature learning of the SDA can achieve approximately **97.7%** accuracy in identifying the digits. To achieve this result, the model in `tf/mnist_sda.py` is set up with the following parameters (which may not necessarily be optimal) with 400000 data points for layer-wise pretraining and 1000000 data points for fine tuning:
+
+```python
+sda = SDAutoencoder(dims=[784, 400, 200, 80],
+                    activations=["sigmoid", "sigmoid", "sigmoid"],
+                    sess=sess,
+                    noise=0.05,
+                    loss="rmse")
+```
+Total execution time for feature learning, training, and evaluation was just under 9 minutes on my 1.3 GHz MacAir processor. This result improves upon the benchmark of 92% achieved by just a [simple softmax classifier](https://www.tensorflow.org/versions/r0.9/tutorials/mnist/beginners/index.html#mnist-for-ml-beginners) without feature learning. It is also comparable to some simple 2D convolutional network models, which are optimized to take advantage of the 2D structures in image data.
+
+In the future, we plan to do additional testing to optimize hyperparameters in the model and improve execution speed in various parts of the model.
+
 ## Current status
 - (Done) SDA implemented in final_sda.py in TensorFlow.
-- (WIP) Implement softmax classifier.
+- (Done) Implement softmax classifier.
+- (To do) Implement command line execution of program.
 - (WIP) Testing for any silent bugs.
 - (To do) Enable multi-gpu support in the architecture.
 - (To do) Add compatibility for other data-loading methods
