@@ -7,7 +7,7 @@ import numpy as np
 # Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 # X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
-OUTPUT_PATH = "../data/ip_predicted_ys_50_epoch_rose.csv"
+OUTPUT_PATH = "../data/outputs/ip_pred_ys_7_28.csv"
 
 X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
 Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
@@ -100,7 +100,7 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
 def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_filepath, output_filepath,
                batch_size=100, print_step=100):
     x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
-    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=False)
+    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)  # FIXME: Check if headers
     xy_test_gen = merge_generators(x_test, y_test)
     test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_filepath, print_step)
 
@@ -138,8 +138,8 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
         # Debug
-        # if step == 100:
-        #     break
+        if step == 10:
+            break
 
         correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -163,11 +163,12 @@ def main():
                         sess=sess,
                         noise=0.05,
                         loss="rmse",
-                        print_step=50)
+                        batch_size=500,
+                        print_step=10)
 
     sda.pretrain_network(X_TRAIN_PATH, epochs=10)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=50)
-    transformed_filepath = "../data/x_test_transformed_SAM_5.csv"
+    transformed_filepath = "../data/outputs/ip_x_test_transformed_SAM_7_28.csv"
     sda.write_encoded_input(transformed_filepath, X_TEST_PATH)
 
     sess.close()

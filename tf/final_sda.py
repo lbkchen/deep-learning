@@ -355,7 +355,7 @@ class SDAutoencoder:
 
     @stopwatch
     def write_encoded_input(self, filepath, x_test_path):
-        x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)  # FIXME: WRONG
+        x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)
         self.write_encoded_input_gen(filepath, x_test_gen=x_test)
 
     @stopwatch
@@ -478,6 +478,10 @@ class SDAutoencoder:
                 if step % TENSORBOARD_LOG_STEP == 0:
                     summary = sess.run(merged, feed_dict={x_original: batch_x_original})
                     pretrain_writer.add_summary(summary, global_step=step)
+
+                # FIXME: Remove
+                if step > 2:
+                    break
 
                 step += 1
 
@@ -603,6 +607,10 @@ class SDAutoencoder:
                 if step % TENSORBOARD_LOG_STEP == 0:
                     summary = sess.run(merged, feed_dict={x: batch_xs, y_actual: batch_ys})
                     train_writer.add_summary(summary, global_step=step)
+
+                # FIXME: Debug, remove
+                if step > 2:
+                    break
 
                 step += 1
 
