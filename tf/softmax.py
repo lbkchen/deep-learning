@@ -138,8 +138,8 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
         # Debug
-        if step == 10:
-            break
+        # if step == 10:
+        #     break
 
         correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))

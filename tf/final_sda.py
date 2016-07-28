@@ -468,7 +468,7 @@ class SDAutoencoder:
             pretrain_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/" + hidden_layer.name, sess.graph)
 
             step = 0
-            for batch_x_original, _ in batch_generator:  # FIXME: Might need to train much more than one run-through
+            for batch_x_original in batch_generator:  # FIXME: Doesn't work on MNIST if not using tuple in for loop
                 sess.run(train_op, feed_dict={x_original: batch_x_original})
 
                 if step % self.print_step == 0:
@@ -480,8 +480,8 @@ class SDAutoencoder:
                     pretrain_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Remove
-                if step > 2:
-                    break
+                # if step > 2:
+                #     break
 
                 step += 1
 
@@ -609,8 +609,8 @@ class SDAutoencoder:
                     train_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Debug, remove
-                if step > 2:
-                    break
+                # if step > 2:
+                #     break
 
                 step += 1
 
