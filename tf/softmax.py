@@ -100,7 +100,7 @@ def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=
 def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_filepath, output_filepath,
                batch_size=100, print_step=100):
     x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
-    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)
+    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=False)
     xy_test_gen = merge_generators(x_test, y_test)
     test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_filepath, print_step)
 

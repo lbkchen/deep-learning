@@ -468,12 +468,8 @@ class SDAutoencoder:
             pretrain_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/" + hidden_layer.name, sess.graph)
 
             step = 0
-            for batch_x_original in batch_generator:  # FIXME: Might need to train much more than one run-through
+            for batch_x_original, _ in batch_generator:  # FIXME: Might need to train much more than one run-through
                 sess.run(train_op, feed_dict={x_original: batch_x_original})
-
-                # Debug: remove
-                # if step >= 50:
-                #     break
 
                 if step % self.print_step == 0:
                     loss_value = sess.run(loss, feed_dict={x_original: batch_x_original})
@@ -511,15 +507,16 @@ class SDAutoencoder:
                 for i in range(len(activations))]
 
     @stopwatch
-    def pretrain_network_gen(self, x_train_gen):
+    def pretrain_network_gen(self, x_train_gen_f):
         """Pretrains the network with a generator supplying input. Use for testing MNIST.
 
-        :param x_train_gen: A generator that iterates through the x-train values for however
-            many times necessary.
+        :param x_train_gen_f: A function that when called with no arguments returns a generator
+            that iterates through the entire train dataset.
         :return: None
         """
         print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
+            x_train_gen = x_train_gen_f()
             self.pretrain_layer(i, x_train_gen, act=tf.nn.sigmoid)
         print("Finished pretraining of autoencoder network.")
 
@@ -587,9 +584,6 @@ class SDAutoencoder:
 
             sess.run(tf.initialize_all_variables())
 
-            # x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
-            # y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
-
             # Merge summaries and get a summary writer
             merged = tf.merge_summary(summary_list)
             train_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/finetune", sess.graph)
@@ -597,10 +591,6 @@ class SDAutoencoder:
             step = 0
             for batch_xs, batch_ys in xy_train_gen:
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
-
-                # Debug: remove
-                # if step >= 50:
-                #     break
 
                 if step % self.print_step == 0:
                     print("Step %s, batch accuracy: " % step,

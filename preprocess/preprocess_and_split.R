@@ -88,7 +88,7 @@ print("Finished splitting into train and test sets.")
 # ROSE algorithm for balancing training data by over/undersampling
 print("Beginning to apply ROSE algorithm.")
 result_sample_size <- 200000
-rare_proportion <- 0.5
+rare_proportion <- 0.4
 # Sam.train.without_factors <- Sam.train[, !c("StatePatientID", "ED_YTM"), with = FALSE]
 # Sam.train.factors <- Sam.train[, c("StatePatientID", "ED_YTM"), with = FALSE]
 Sam.train <- ovun.sample(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
@@ -108,6 +108,7 @@ Sam.train.y <- Sam.train[, c("IP_YTM"), with = FALSE]
 rm(Sam.train)
 Sam.test.x <- Sam.test[, !c("StatePatientID", "ED_YTM", "IP_YTM"), with = FALSE]
 Sam.test.y <- Sam.test[, c("IP_YTM"), with = FALSE]
+Sam.test.ids <- Sam.test[, c("StatePatientID"), with = FALSE]
 rm(Sam.test)
 print("Finished split into x/y.")
 
@@ -126,6 +127,7 @@ fwrite(Sam.train.x, paste0(base_name, "_train_x_r", ".csv"))
 fwrite(Sam.train.y, paste0(base_name, "_train_y_r", ".csv"))
 fwrite(Sam.test.x, paste0(base_name, "_test_x_r", ".csv"))
 fwrite(Sam.test.y, paste0(base_name, "_test_y_r", ".csv"))
+fwrite(Sam.test.ids, paste0(base_name, "_test_ids", ".csv"))
 print("Finished write to file.")
 
 # Remove all columns with all zero entries 

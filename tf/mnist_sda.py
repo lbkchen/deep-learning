@@ -53,12 +53,12 @@ def main():
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.05,
-                        loss="cross-entropy")
+                        loss="rmse")
 
-    mnist_train_gen = get_mnist_batch_generator(True, batch_size=100, batch_limit=1000)
+    mnist_train_gen_f = lambda: get_mnist_batch_generator(True, batch_size=100, batch_limit=4000)
 
-    sda.pretrain_network_gen(mnist_train_gen)
-    trained_parameters = sda.finetune_parameters_gen(get_mnist_batch_generator(True, batch_size=100, batch_limit=2000),
+    sda.pretrain_network_gen(mnist_train_gen_f)
+    trained_parameters = sda.finetune_parameters_gen(get_mnist_batch_generator(True, batch_size=100, batch_limit=10000),
                                                      output_dim=10)
     transformed_filepath = "../data/mnist_test_transformed.csv"
     test_ys_filepath = "../data/mnist_test_ys.csv"
@@ -70,7 +70,7 @@ def main():
 
     test_model(parameters_dict=trained_parameters,
                input_dim=80,
-               output_dim=10, 
+               output_dim=10,
                x_test_filepath=transformed_filepath,
                y_test_filepath=test_ys_filepath,
                output_filepath=output_filepath)
