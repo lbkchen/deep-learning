@@ -19,15 +19,20 @@ def get_mnist_batch_generator(is_train, batch_size, batch_limit=100):
             yield mnist.test.next_batch(batch_size)
 
 
+def get_mnist_batch_xs_generator(is_train, batch_size, batch_limit=100):
+    for x, _ in get_mnist_batch_generator(is_train, batch_size, batch_limit):
+        yield x
+
+
 def main():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[784, 400, 200, 80],
+    sda = SDAutoencoder(dims=[784, 80, 80, 80],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.05,
                         loss="rmse")
 
-    mnist_train_gen_f = lambda: get_mnist_batch_generator(True, batch_size=100, batch_limit=4000)
+    mnist_train_gen_f = lambda: get_mnist_batch_xs_generator(True, batch_size=100, batch_limit=4000)
 
     sda.pretrain_network_gen(mnist_train_gen_f)
     trained_parameters = sda.finetune_parameters_gen(get_mnist_batch_generator(True, batch_size=100, batch_limit=10000),

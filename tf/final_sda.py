@@ -8,6 +8,7 @@ import tensorflow as tf
 import numpy as np
 import time
 import csv
+from math import sqrt
 from functools import wraps
 
 
@@ -148,6 +149,19 @@ def attach_scalar_summary(var, name, summ_list):
     """Attach scalar summaries to a scalar."""
     summ = tf.scalar_summary(tags=name, values=var)
     summ_list.append(summ)
+
+
+def weight_variable(input_dim, output_dim, name=None, strech_factor=1, dtype=tf.float32):
+    limit = sqrt(6 / (input_dim + output_dim))
+    initial = tf.random_uniform(shape=[input_dim, output_dim],
+                                minval=-(strech_factor * limit),
+                                maxval=strech_factor * limit,
+                                dtype=dtype)
+    return tf.Variable(initial, name=name)
+
+
+def bias_variable(dim, initial_value=0.0, name=None, dtype=tf.float32):
+    return tf.Variable(tf.constant(value=initial_value, dtype=dtype, shape=[dim]), name=name)
 
 
 class NNLayer:
@@ -428,20 +442,16 @@ class SDAutoencoder:
 
             with tf.name_scope("encoding_vars"):
                 encode = {
-                    "weights": tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, dtype=tf.float32),
-                                           name="weights"),
-                    "biases": tf.Variable(tf.truncated_normal([output_dim], stddev=0.1, dtype=tf.float32),
-                                          name="biases")
+                    "weights": weight_variable(input_dim, output_dim, name="weights"),
+                    "biases": bias_variable(output_dim, initial_value=0, name="biases")
                 }
                 attach_variable_summaries(encode["weights"], encode["weights"].name, summ_list=summary_list)
                 attach_variable_summaries(encode["biases"], encode["biases"].name, summ_list=summary_list)
 
             with tf.name_scope("decoding_vars"):
                 decode = {
-                    "weights": tf.transpose(encode["weights"],
-                                            name="transposed_weights"),  # Tied weights
-                    "biases": tf.Variable(tf.truncated_normal([input_dim], stddev=0.1, dtype=tf.float32),
-                                          name="decode_biases")
+                    "weights": tf.transpose(encode["weights"], name="transposed_weights"),  # Tied weights
+                    "biases": bias_variable(input_dim, initial_value=0, name="decode_biases")
                 }
                 attach_variable_summaries(decode["weights"], decode["weights"].name, summ_list=summary_list)
                 attach_variable_summaries(decode["biases"], decode["biases"].name, summ_list=summary_list)
@@ -558,8 +568,8 @@ class SDAutoencoder:
             space. The latter is the dimension of the y value space for classification. Ex: If the output
             should be binary, then the output_dim = 2."""
             with tf.name_scope("softmax_variables"):
-                W = tf.Variable(tf.truncated_normal(shape=[self.output_dim, output_dim], stddev=0.1), name="weights")
-                b = tf.Variable(tf.constant(0.1, shape=[output_dim]), name="biases")
+                W = weight_variable(self.output_dim, output_dim, name="weights")
+                b = bias_variable(output_dim, initial_value=0.5, name="biases")
                 attach_variable_summaries(W, W.name, summ_list=summary_list)
                 attach_variable_summaries(b, b.name, summ_list=summary_list)
 
@@ -624,7 +634,7 @@ class SDAutoencoder:
 def main():
     sess = tf.Session()
     sda = SDAutoencoder(dims=[3997, 500, 500, 500],
-                        activations=["sigmoid", "sigmoid", "sigmoid"],
+                        activations=["tanh", "tanh", "tanh"],
                         sess=sess,
                         noise=0.05,
                         loss="rmse",

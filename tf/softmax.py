@@ -7,7 +7,7 @@ import numpy as np
 # Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 # X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
-OUTPUT_PATH = "../data/outputs/ip_pred_ys_7_28.csv"
+OUTPUT_PATH = "../data/outputs/ip_pred_ys_7_28_v2.csv"
 
 X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
 Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
@@ -159,7 +159,7 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
 def main():
     sess = tf.Session()
     sda = SDAutoencoder(dims=[3997, 200, 200, 200],
-                        activations=["sigmoid", "sigmoid", "sigmoid"],
+                        activations=["tanh", "tanh", "tanh"],
                         sess=sess,
                         noise=0.05,
                         loss="rmse",
@@ -168,7 +168,7 @@ def main():
 
     sda.pretrain_network(X_TRAIN_PATH, epochs=10)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=50)
-    transformed_filepath = "../data/outputs/ip_x_test_transformed_SAM_7_28.csv"
+    transformed_filepath = "../data/outputs/ip_x_test_transformed_SAM_7_28_v2.csv"
     sda.write_encoded_input(transformed_filepath, X_TEST_PATH)
 
     sess.close()
