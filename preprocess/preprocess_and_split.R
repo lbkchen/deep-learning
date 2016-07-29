@@ -122,12 +122,12 @@ Sam.test.y[, IP_YTM := NULL]
 
 # Write all splits to file
 print("Begin write to file.")
-base_name <- "SAMPart01"
-fwrite(Sam.train.x, paste0(base_name, "_train_x_r", ".csv"))
-fwrite(Sam.train.y, paste0(base_name, "_train_y_r", ".csv"))
-fwrite(Sam.test.x, paste0(base_name, "_test_x_r", ".csv"))
-fwrite(Sam.test.y, paste0(base_name, "_test_y_r", ".csv"))
-fwrite(Sam.test.ids, paste0(base_name, "_test_ids", ".csv"))
+base_name <- "SAMFull"
+fwrite(Sam.train.x, paste0(base_name, "_ip_train_x_r", ".csv"))
+fwrite(Sam.train.y, paste0(base_name, "_ip_train_y_r", ".csv"))
+fwrite(Sam.test.x, paste0(base_name, "_ip_test_x_r", ".csv"))
+fwrite(Sam.test.y, paste0(base_name, "_ip_test_y_r", ".csv"))
+fwrite(Sam.test.ids, paste0(base_name, "_ip_test_ids", ".csv"))
 print("Finished write to file.")
 
 # Remove all columns with all zero entries 

@@ -9,10 +9,15 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 OUTPUT_PATH = "../data/outputs/ip_pred_ys_7_28_v3.csv"
 
-X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
-Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
-X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
-Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
+# X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
+# Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
+# X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
+# Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
+
+X_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_x_r.csv"
+Y_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_y_r.csv"
+X_TEST_PATH = "../data/rose/small/smallSAMPart01_test_x_r.csv"
+Y_TEST_PATH = "../data/rose/small/smallSAMPart01_test_y_r.csv"
 
 VARIABLE_SAVE_PATH = "../data/outputs/last_vars.ckpt"
 
@@ -165,7 +170,7 @@ def main():
                         sess=sess,
                         noise=0.05,
                         loss="rmse",
-                        batch_size=500,
+                        batch_size=100,
                         print_step=50)
 
     sda.pretrain_network(X_TRAIN_PATH, epochs=10)
