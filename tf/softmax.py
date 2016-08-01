@@ -7,17 +7,20 @@ import numpy as np
 # Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
 # X_TEST_PATH = "../data/x_test_transformed_SAM_2.csv"
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
+
+# NEED TO RENAME FOR EVERY TRIAL
 OUTPUT_PATH = "../data/outputs/ip_pred_ys_7_28_v3.csv"
+TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_SAM_7_28_v3.csv"
 
-# X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
-# Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
-# X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
-# Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
+X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
+Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
+X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
+Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
 
-X_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_x_r.csv"
-Y_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_y_r.csv"
-X_TEST_PATH = "../data/rose/small/smallSAMPart01_test_x_r.csv"
-Y_TEST_PATH = "../data/rose/small/smallSAMPart01_test_y_r.csv"
+# X_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_x_r.csv"
+# Y_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_y_r.csv"
+# X_TEST_PATH = "../data/rose/small/smallSAMPart01_test_x_r.csv"
+# Y_TEST_PATH = "../data/rose/small/smallSAMPart01_test_y_r.csv"
 
 VARIABLE_SAVE_PATH = "../data/outputs/last_vars.ckpt"
 
@@ -44,63 +47,63 @@ def write_data(data, filename):  # FIXME: Copied from sda, should refactor to st
         np.savetxt(file, data, delimiter=",")
 
 
-@stopwatch
-def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=0.001, batch_size=100,
-                  print_step=50, epochs=1):
-    """Trains a softmax model for prediction."""
-    # Model input and parameters
-    x = tf.placeholder(tf.float32, [None, input_dim])
-    weights = tf.Variable(tf.truncated_normal(shape=[input_dim, output_dim], stddev=0.1))
-    biases = tf.Variable(tf.constant(0.1, shape=[output_dim]))
-
-    # Outputs and true y-values
-    y_logits = tf.matmul(x, weights) + biases
-    y_pred = tf.nn.softmax(y_logits)
-    y_actual = tf.placeholder(tf.float32, [None, output_dim])
-
-    # Cross entropy and training step
-    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_logits, labels=y_actual))
-    train_step = tf.train.AdamOptimizer(learning_rate=lr).minimize(cross_entropy)
-
-    # Start session and run batches based on number of epochs
-    sess = tf.Session()
-    sess.run(tf.initialize_all_variables())
-    x_train = get_batch_generator(filename=x_train_filepath, batch_size=batch_size,
-                                  skip_header=False, repeat=epochs - 1)
-    y_train = get_batch_generator(filename=y_train_filepath, batch_size=batch_size,
-                                  skip_header=True, repeat=epochs - 1)
-    step = 0
-    accuracy_history = []
-    for batch_xs, batch_ys in zip(x_train, y_train):
-        sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
-
-        # Debug
-        # if step == 100:
-        #     break
-
-        # Assess training accuracy for current batch
-        if step % print_step == 0:
-            correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
-            accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-            accuracy_val = sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys})
-            print("Step %s, current batch training accuracy: %s" % (step, accuracy_val))
-            accuracy_history = append_with_limit(accuracy_history, accuracy_val)
-
-        # Assess training accuracy for last 10 batches
-        if step > 0 and step % (print_step * 10) == 0:
-            print("Predicted y-values:\n", sess.run(y_pred, feed_dict={x: batch_xs}))
-            print("Overall batch training accuracy for steps %s to %s: %s" % (step - 10 * print_step,
-                                                                              step,
-                                                                              average(accuracy_history)))
-
-        step += 1
-
-    parameters_dict = {
-        "weights": sess.run(weights),
-        "biases": sess.run(biases)
-    }
-    sess.close()
-    return parameters_dict
+# @stopwatch
+# def train_softmax(input_dim, output_dim, x_train_filepath, y_train_filepath, lr=0.001, batch_size=100,
+#                   print_step=50, epochs=1):
+#     """Trains a softmax model for prediction."""
+#     # Model input and parameters
+#     x = tf.placeholder(tf.float32, [None, input_dim])
+#     weights = tf.Variable(tf.truncated_normal(shape=[input_dim, output_dim], stddev=0.1))
+#     biases = tf.Variable(tf.constant(0.1, shape=[output_dim]))
+#
+#     # Outputs and true y-values
+#     y_logits = tf.matmul(x, weights) + biases
+#     y_pred = tf.nn.softmax(y_logits)
+#     y_actual = tf.placeholder(tf.float32, [None, output_dim])
+#
+#     # Cross entropy and training step
+#     cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_logits, labels=y_actual))
+#     train_step = tf.train.AdamOptimizer(learning_rate=lr).minimize(cross_entropy)
+#
+#     # Start session and run batches based on number of epochs
+#     sess = tf.Session()
+#     sess.run(tf.initialize_all_variables())
+#     x_train = get_batch_generator(filename=x_train_filepath, batch_size=batch_size,
+#                                   skip_header=False, repeat=epochs - 1)
+#     y_train = get_batch_generator(filename=y_train_filepath, batch_size=batch_size,
+#                                   skip_header=True, repeat=epochs - 1)
+#     step = 0
+#     accuracy_history = []
+#     for batch_xs, batch_ys in zip(x_train, y_train):
+#         sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
+#
+#         # Debug
+#         # if step == 100:
+#         #     break
+#
+#         # Assess training accuracy for current batch
+#         if step % print_step == 0:
+#             correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
+#             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+#             accuracy_val = sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys})
+#             print("Step %s, current batch training accuracy: %s" % (step, accuracy_val))
+#             accuracy_history = append_with_limit(accuracy_history, accuracy_val)
+#
+#         # Assess training accuracy for last 10 batches
+#         if step > 0 and step % (print_step * 10) == 0:
+#             print("Predicted y-values:\n", sess.run(y_pred, feed_dict={x: batch_xs}))
+#             print("Overall batch training accuracy for steps %s to %s: %s" % (step - 10 * print_step,
+#                                                                               step,
+#                                                                               average(accuracy_history)))
+#
+#         step += 1
+#
+#     parameters_dict = {
+#         "weights": sess.run(weights),
+#         "biases": sess.run(biases)
+#     }
+#     sess.close()
+#     return parameters_dict
 
 
 @stopwatch
@@ -175,15 +178,14 @@ def main():
 
     sda.pretrain_network(X_TRAIN_PATH, epochs=10)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=50)
-    transformed_filepath = "../data/outputs/ip_x_test_transformed_SAM_7_28_v3.csv"
-    sda.write_encoded_input(transformed_filepath, X_TEST_PATH)
+    sda.write_encoded_input(TRANSFORMED_PATH, X_TEST_PATH)
     sda.save_variables(VARIABLE_SAVE_PATH)
     sess.close()
 
     test_model(parameters_dict=trained_parameters,
-               input_dim=200,
+               input_dim=sda.output_dim,
                output_dim=2,
-               x_test_filepath=transformed_filepath,
+               x_test_filepath=TRANSFORMED_PATH,
                y_test_filepath=Y_TEST_PATH,
                output_filepath=OUTPUT_PATH)
 

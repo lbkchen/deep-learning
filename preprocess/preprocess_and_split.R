@@ -3,11 +3,21 @@ library(readr)
 library(DMwR)
 library(ROSE)
 
+# Usage (must be run from command line)
+# Rscript <path/to/sam_table.csv> <path/to/training_ids.csv> <path/to/testing_ids.csv> <optional: base name>
+# Program will print steps of execution and write 5 different files to disk:
+#   - Train x (saved as base_name_train_x.csv)
+#   - Train y (saved as base_name_train_y.csv as one-hot vectors)
+#   - Test x (saved as base_name_test_x.csv)
+#   - Test y (saved as base_name_test_y.csv as one-hot vectors)
+#   - Test ids (saved as base_name_test_ids.csv) (patient ids in order of all the test cases)
+
 # Parse command line arguments
 args <- commandArgs(trailingOnly = TRUE)
 path_sam <- args[1]
 path_train_ids <- args[2]
 path_test_ids <- args[3]
+base_name <- args[4]
 
 # Read in raw files: SAM table, train case ids, and test case ids
 print(paste("Reading", path_sam))
@@ -122,12 +132,12 @@ Sam.test.y[, IP_YTM := NULL]
 
 # Write all splits to file
 print("Begin write to file.")
-base_name <- "SAMFull"
-fwrite(Sam.train.x, paste0(base_name, "_ip_train_x_r", ".csv"))
-fwrite(Sam.train.y, paste0(base_name, "_ip_train_y_r", ".csv"))
-fwrite(Sam.test.x, paste0(base_name, "_ip_test_x_r", ".csv"))
-fwrite(Sam.test.y, paste0(base_name, "_ip_test_y_r", ".csv"))
-fwrite(Sam.test.ids, paste0(base_name, "_ip_test_ids", ".csv"))
+base_name <- ifelse(is.na(base_name), "SAMFull", base_name)
+fwrite(Sam.train.x, paste0(base_name, "_train_x", ".csv"))
+fwrite(Sam.train.y, paste0(base_name, "_train_y", ".csv"))
+fwrite(Sam.test.x, paste0(base_name, "_test_x", ".csv"))
+fwrite(Sam.test.y, paste0(base_name, "_test_y", ".csv"))
+fwrite(Sam.test.ids, paste0(base_name, "_test_ids", ".csv"))
 print("Finished write to file.")
 
 # Remove all columns with all zero entries 
