@@ -46,6 +46,9 @@ luac.out
 data
 logs
 
+# Exclude old stuff
+old
+
 # Exclude training code
 training
 
