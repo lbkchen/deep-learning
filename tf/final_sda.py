@@ -22,11 +22,6 @@ from functools import wraps
 ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-# X_TRAIN_PATH = "../data/splits/PXTrainSAM.csv"
-# Y_TRAIN_PATH = "../data/splits/OPYTrainSAM.csv"
-# X_TEST_PATH = "../data/splits/PXTestSAM.csv"
-# Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
-
 # X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
 # Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
 # X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
@@ -40,7 +35,7 @@ Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
 ENCODED_X_PATH = "../data/x_test_new_rose.csv"
 
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
-TENSORBOARD_LOG_STEP = 10
+TENSORBOARD_LOG_STEP = 20
 
 
 """
@@ -457,7 +452,7 @@ class SDAutoencoder:
                 attach_variable_summaries(decode["biases"], decode["biases"].name, summ_list=summary_list)
 
             with tf.name_scope("encoded_and_decoded"):
-                encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])  # FIXME: Need some histogram summaries?
+                encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
                 decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
                 attach_variable_summaries(encoded, "encoded", summ_list=summary_list)
                 attach_variable_summaries(decoded, "decoded", summ_list=summary_list)
@@ -478,7 +473,7 @@ class SDAutoencoder:
             pretrain_writer = tf.train.SummaryWriter(TENSORBOARD_LOGDIR + "/train/" + hidden_layer.name, sess.graph)
 
             step = 0
-            for batch_x_original in batch_generator:  # FIXME: Doesn't work on MNIST if not using tuple in for loop
+            for batch_x_original in batch_generator:
                 sess.run(train_op, feed_dict={x_original: batch_x_original})
 
                 if step % self.print_step == 0:
@@ -490,8 +485,8 @@ class SDAutoencoder:
                     pretrain_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Remove
-                # if step > 2:
-                #     break
+                if step > 2:
+                    break
 
                 step += 1
 
@@ -620,8 +615,8 @@ class SDAutoencoder:
                     train_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Debug, remove
-                # if step > 2:
-                #     break
+                if step > 2:
+                    break
 
                 step += 1
 

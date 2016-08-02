@@ -9,13 +9,13 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/outputs/ip_pred_ys_7_28_v3.csv"
-TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_SAM_7_28_v3.csv"
+OUTPUT_PATH = "../data/outputs/ip_pred_ys_8_2.csv"
+TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_SAM_8_2.csv"
 
-X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
-Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
-X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
-Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
+X_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_x.csv"
+Y_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_y.csv"
+X_TEST_PATH = "../data/4k/FullReducedSAMTable_test_x.csv"
+Y_TEST_PATH = "../data/4k/FullReducedSAMTable_test_y.csv"
 
 # X_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_x_r.csv"
 # Y_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_y_r.csv"
@@ -140,16 +140,15 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
 
     # Evaluate testing accuracy
     sess = tf.Session()
-    # x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
-    # y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)
+
     step = 0
     accuracy_history = []
     for batch_xs, batch_ys in xy_test_gen:
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
-        # Debug
-        # if step == 10:
-        #     break
+        # FIXME: Debug -- remove
+        if step == 10:
+            break
 
         correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -168,7 +167,7 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
 @stopwatch
 def main():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[3997, 200, 200, 200],
+    sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
                         activations=["tanh", "tanh", "tanh"],
                         sess=sess,
                         noise=0.05,
