@@ -13,7 +13,7 @@ Columns <- fread(path_columns)
 print("Finished reading files")
 
 Sam.names <- names(read.csv(path_sam, nrows = 1, fileEncoding = "UTF-8-BOM"))
-Column.names <- names(read.csv(path_sam, nrows = 1, fileEncoding = "UTF-8-BOM"))
+Column.names <- names(read.csv(path_columns, nrows = 1, fileEncoding = "UTF-8-BOM"))
 
 names(Sam) <- Sam.names
 names(Columns) <- Column.names
