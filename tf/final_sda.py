@@ -485,8 +485,8 @@ class SDAutoencoder:
                     pretrain_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Remove
-                if step > 2:
-                    break
+                # if step > 2:
+                #     break
 
                 step += 1
 
@@ -608,15 +608,15 @@ class SDAutoencoder:
                 # For debugging predicted y values
                 if step % (self.print_step * 10) == 0:
                     print("Predicted y-value:", sess.run(y_pred, feed_dict={x: batch_xs})[0])
-                    print("Actual y-value", y_actual[0])
+                    print("Actual y-value", batch_ys[0])
 
                 if step % TENSORBOARD_LOG_STEP == 0:
                     summary = sess.run(merged, feed_dict={x: batch_xs, y_actual: batch_ys})
                     train_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Debug, remove
-                if step > 2:
-                    break
+                # if step > 2:
+                #     break
 
                 step += 1
 
