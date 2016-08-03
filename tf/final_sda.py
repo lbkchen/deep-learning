@@ -599,8 +599,6 @@ class SDAutoencoder:
 
             step = 0
             for batch_xs, batch_ys in xy_train_gen:
-                sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
-
                 if step % self.print_step == 0:
                     print("Step %s, batch accuracy: " % step,
                           sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys}))
@@ -608,7 +606,7 @@ class SDAutoencoder:
                 # For debugging predicted y values
                 if step % (self.print_step * 10) == 0:
                     print("Predicted y-value:", sess.run(y_pred, feed_dict={x: batch_xs})[0])
-                    print("Actual y-value", batch_ys[0])
+                    print("Actual y-value:", batch_ys[0])
 
                 if step % TENSORBOARD_LOG_STEP == 0:
                     summary = sess.run(merged, feed_dict={x: batch_xs, y_actual: batch_ys})
@@ -618,6 +616,7 @@ class SDAutoencoder:
                 # if step > 2:
                 #     break
 
+                sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
                 step += 1
 
             self.finalize_all_variables()
