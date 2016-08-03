@@ -10,7 +10,7 @@ import numpy as np
 
 # NEED TO RENAME FOR EVERY TRIAL
 OUTPUT_PATH = "../data/outputs/ip_pred_ys_8_2.csv"
-TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_SAM_8_2.csv"
+TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_unsupervised_SAM_8_3.csv"
 
 X_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_x.csv"
 Y_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_y.csv"
@@ -22,7 +22,7 @@ Y_TEST_PATH = "../data/4k/FullReducedSAMTable_test_y.csv"
 # X_TEST_PATH = "../data/rose/small/smallSAMPart01_test_x_r.csv"
 # Y_TEST_PATH = "../data/rose/small/smallSAMPart01_test_y_r.csv"
 
-VARIABLE_SAVE_PATH = "../data/outputs/last_vars.ckpt"
+VARIABLE_SAVE_PATH = "../data/outputs/no_tuning_vars.ckpt"
 
 
 def average(lst):
@@ -110,7 +110,7 @@ def write_data(data, filename):  # FIXME: Copied from sda, should refactor to st
 def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_filepath, output_filepath,
                batch_size=100, print_step=100):
     x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
-    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=False)  # FIXME: Check if headers
+    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)  # FIXME: Check if headers
     xy_test_gen = merge_generators(x_test, y_test)
     test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_filepath, print_step)
 
@@ -165,7 +165,24 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
 
 
 @stopwatch
-def main():
+def unsupervised():
+    sess = tf.Session()
+    sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
+                        activations=["tanh", "tanh", "tanh"],
+                        sess=sess,
+                        noise=0.05,
+                        loss="rmse",
+                        batch_size=100,
+                        print_step=50)
+
+    sda.pretrain_network(X_TRAIN_PATH, epochs=8)
+    sda.write_encoded_input(TRANSFORMED_PATH, X_TEST_PATH)
+    sda.save_variables(VARIABLE_SAVE_PATH)
+    sess.close()
+
+
+@stopwatch
+def full_test():
     sess = tf.Session()
     sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
                         activations=["tanh", "tanh", "tanh"],
@@ -187,6 +204,11 @@ def main():
                x_test_filepath=TRANSFORMED_PATH,
                y_test_filepath=Y_TEST_PATH,
                output_filepath=OUTPUT_PATH)
+
+
+@stopwatch
+def main():
+    unsupervised()
 
 
 if __name__ == "__main__":
