@@ -10,7 +10,7 @@ import numpy as np
 
 # NEED TO RENAME FOR EVERY TRIAL
 OUTPUT_PATH = "../data/outputs/ip_pred_ys_8_2.csv"
-TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_unsupervised_SAM_8_3.csv"
+TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_unsupervised_SAM_8_3_v2.csv"
 
 X_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_x.csv"
 Y_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_y.csv"
@@ -139,6 +139,8 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
     y_actual = tf.placeholder(tf.float32, [None, output_dim])
 
     # Evaluate testing accuracy
+    correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     sess = tf.Session()
 
     step = 0
@@ -150,8 +152,6 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
         # if step == 10:
         #     break
 
-        correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_actual, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         accuracy_val = sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys})
         accuracy_history.append(accuracy_val)
 
@@ -175,7 +175,12 @@ def unsupervised():
                         batch_size=100,
                         print_step=50)
 
+    layer_1_weights_path = "../data/outputs/last_weights"
+    layer_1_biases_path = "../data/outputs/last_biases"
+
     sda.pretrain_network(X_TRAIN_PATH, epochs=8)
+    sda.write_data(sda.hidden_layers[1].weights, layer_1_weights_path)
+    sda.write_data(sda.hidden_layers[1].biases, layer_1_biases_path)
     sda.write_encoded_input(TRANSFORMED_PATH, X_TEST_PATH)
     sda.save_variables(VARIABLE_SAVE_PATH)
     sess.close()
