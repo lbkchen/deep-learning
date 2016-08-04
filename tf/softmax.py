@@ -9,20 +9,20 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/outputs/ip_pred_ys_8_2.csv"
-TRANSFORMED_PATH = "../data/outputs/ip_x_test_transformed_unsupervised_SAM_8_3_v2.csv"
+OUTPUT_PATH = "../data/ed/4k/outputs/ed_pred_ys_8_4.csv"
+TRANSFORMED_PATH = "../data/ed/4k/outputs/ed_x_test_transformed_8_4.csv"
 
-X_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_x.csv"
-Y_TRAIN_PATH = "../data/4k/FullReducedSAMTable_train_y.csv"
-X_TEST_PATH = "../data/4k/FullReducedSAMTable_test_x.csv"
-Y_TEST_PATH = "../data/4k/FullReducedSAMTable_test_y.csv"
+X_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_x.csv"
+Y_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_y.csv"
+X_TEST_PATH = "../data/ed/4k/ED_FullReducedSAM_test_x.csv"
+Y_TEST_PATH = "../data/ed/4k/ED_FullReducedSAM_test_y.csv"
 
 # X_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_x_r.csv"
 # Y_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_y_r.csv"
 # X_TEST_PATH = "../data/rose/small/smallSAMPart01_test_x_r.csv"
 # Y_TEST_PATH = "../data/rose/small/smallSAMPart01_test_y_r.csv"
 
-VARIABLE_SAVE_PATH = "../data/outputs/last_vars.ckpt"
+VARIABLE_SAVE_PATH = "../data/ed/4k/vars/last_vars.ckpt"
 
 
 def average(lst):
@@ -192,10 +192,10 @@ def full_test():
     sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
                         activations=["tanh", "tanh", "tanh"],
                         sess=sess,
-                        noise=0.02,
+                        noise=0.20,
                         loss="rmse",
                         batch_size=100,
-                        print_step=50)
+                        print_step=100)
 
     sda.pretrain_network(X_TRAIN_PATH, epochs=10)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=50)

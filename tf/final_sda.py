@@ -35,7 +35,7 @@ Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
 ENCODED_X_PATH = "../data/x_test_new_rose.csv"
 
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
-TENSORBOARD_LOG_STEP = 20
+TENSORBOARD_LOG_STEP = 50
 
 
 """
