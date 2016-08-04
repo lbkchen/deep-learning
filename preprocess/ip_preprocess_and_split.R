@@ -133,10 +133,10 @@ Sam.test.y[, IP_YTM := NULL]
 # Write all splits to file
 print("Begin write to file.")
 base_name <- ifelse(is.na(base_name), "SAMFull", base_name)
-fwrite(Sam.train.x, paste0(base_name, "_train_x", ".csv"), col.names = FALSE)
-fwrite(Sam.train.y, paste0(base_name, "_train_y", ".csv"), col.names = FALSE)
-fwrite(Sam.test.x, paste0(base_name, "_test_x", ".csv"), col.names = FALSE)
-fwrite(Sam.test.y, paste0(base_name, "_test_y", ".csv"), col.names = FALSE)
+fwrite(Sam.train.x, paste0(base_name, "_train_x", ".csv"))
+fwrite(Sam.train.y, paste0(base_name, "_train_y", ".csv"))
+fwrite(Sam.test.x, paste0(base_name, "_test_x", ".csv"))
+fwrite(Sam.test.y, paste0(base_name, "_test_y", ".csv"))
 fwrite(Sam.test.ids, paste0(base_name, "_test_ids", ".csv"))
 print("Finished write to file.")
 

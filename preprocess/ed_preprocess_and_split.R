@@ -97,11 +97,11 @@ print("Finished splitting into train and test sets.")
 
 # ROSE algorithm for balancing training data by over/undersampling
 print("Beginning to apply ROSE algorithm.")
-result_sample_size <- 200000
-rare_proportion <- 0.4
+result_sample_size <- 300000
+rare_proportion <- 0.5
 # Sam.train.without_factors <- Sam.train[, !c("StatePatientID", "ED_YTM"), with = FALSE]
 # Sam.train.factors <- Sam.train[, c("StatePatientID", "ED_YTM"), with = FALSE]
-Sam.train <- ovun.sample(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
+Sam.train <- ovun.sample(ED_YTM ~ . -StatePatientID -IP_YTM, data = Sam.train, 
                          method = "both", N = result_sample_size, p = rare_proportion)$data
 Sam.train <- data.table(Sam.train)
 print("Finished applying ROSE algorithm.")
@@ -114,21 +114,21 @@ print("Finished shuffle.")
 # Split into train.x, train.y, test.x, test.y
 print("Begin split into x/y.")
 Sam.train.x <- Sam.train[, !c("StatePatientID", "ED_YTM", "IP_YTM"), with = FALSE]
-Sam.train.y <- Sam.train[, c("IP_YTM"), with = FALSE]
+Sam.train.y <- Sam.train[, c("ED_YTM"), with = FALSE]
 rm(Sam.train)
 Sam.test.x <- Sam.test[, !c("StatePatientID", "ED_YTM", "IP_YTM"), with = FALSE]
-Sam.test.y <- Sam.test[, c("IP_YTM"), with = FALSE]
+Sam.test.y <- Sam.test[, c("ED_YTM"), with = FALSE]
 Sam.test.ids <- Sam.test[, c("StatePatientID"), with = FALSE]
 rm(Sam.test)
 print("Finished split into x/y.")
 
 # Change y to one-hot
-Sam.train.y[, zero := ifelse(IP_YTM == 0, 1, 0)]
-Sam.train.y[, one := IP_YTM]
-Sam.train.y[, IP_YTM := NULL]
-Sam.test.y[, zero := ifelse(IP_YTM == 0, 1, 0)]
-Sam.test.y[, one := IP_YTM]
-Sam.test.y[, IP_YTM := NULL]
+Sam.train.y[, zero := ifelse(ED_YTM == 0, 1, 0)]
+Sam.train.y[, one := ED_YTM]
+Sam.train.y[, ED_YTM := NULL]
+Sam.test.y[, zero := ifelse(ED_YTM == 0, 1, 0)]
+Sam.test.y[, one := ED_YTM]
+Sam.test.y[, ED_YTM := NULL]
 
 # Write all splits to file
 print("Begin write to file.")

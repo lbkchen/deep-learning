@@ -22,7 +22,7 @@ Y_TEST_PATH = "../data/4k/FullReducedSAMTable_test_y.csv"
 # X_TEST_PATH = "../data/rose/small/smallSAMPart01_test_x_r.csv"
 # Y_TEST_PATH = "../data/rose/small/smallSAMPart01_test_y_r.csv"
 
-VARIABLE_SAVE_PATH = "../data/outputs/no_tuning_vars.ckpt"
+VARIABLE_SAVE_PATH = "../data/outputs/last_vars.ckpt"
 
 
 def average(lst):
@@ -213,7 +213,7 @@ def full_test():
 
 @stopwatch
 def main():
-    unsupervised()
+    full_test()
 
 
 if __name__ == "__main__":
