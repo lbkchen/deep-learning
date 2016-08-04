@@ -192,7 +192,7 @@ def full_test():
     sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
                         activations=["tanh", "tanh", "tanh"],
                         sess=sess,
-                        noise=0.05,
+                        noise=0.02,
                         loss="rmse",
                         batch_size=100,
                         print_step=50)

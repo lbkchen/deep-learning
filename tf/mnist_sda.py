@@ -26,17 +26,17 @@ def get_mnist_batch_xs_generator(is_train, batch_size, batch_limit=100):
 
 def main():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[784, 80, 80, 80],
+    sda = SDAutoencoder(dims=[784, 400, 200, 80],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.2,
                         loss="rmse",
                         lr=0.001)
 
-    mnist_train_gen_f = lambda: get_mnist_batch_xs_generator(True, batch_size=100, batch_limit=4000)
+    mnist_train_gen_f = lambda: get_mnist_batch_xs_generator(True, batch_size=100, batch_limit=5000)
 
     sda.pretrain_network_gen(mnist_train_gen_f)
-    trained_parameters = sda.finetune_parameters_gen(get_mnist_batch_generator(True, batch_size=100, batch_limit=20000),
+    trained_parameters = sda.finetune_parameters_gen(get_mnist_batch_generator(True, batch_size=100, batch_limit=30000),
                                                      output_dim=10)
     transformed_filepath = "../data/mnist_test_transformed.csv"
     test_ys_filepath = "../data/mnist_test_ys.csv"

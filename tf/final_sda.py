@@ -66,7 +66,7 @@ def stopwatch(f):
 """
 
 
-def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
+def get_batch_generator(filename, batch_size, skip_header=False, repeat=0):
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
 
@@ -82,8 +82,8 @@ def get_batch_generator(filename, batch_size, skip_header=True, repeat=0):
     with open(filename, "rt") as file:
         reader = csv.reader(file)
 
-        if skip_header:
-            next(reader)
+        # if skip_header:
+        #     next(reader)
 
         index = 0
         this_batch = []
@@ -495,6 +495,7 @@ class SDAutoencoder:
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
     def get_loss(self, tensor_1, tensor_2):
+        """tensor_1: labels, tensor_2: values"""
         if self.loss == "rmse":
             return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(tensor_1, tensor_2))))
         elif self.loss == "cross-entropy":
@@ -564,7 +565,7 @@ class SDAutoencoder:
             should be binary, then the output_dim = 2."""
             with tf.name_scope("softmax_variables"):
                 W = weight_variable(self.output_dim, output_dim, name="weights")
-                b = bias_variable(output_dim, initial_value=0.5, name="biases")
+                b = bias_variable(output_dim, initial_value=1/output_dim, name="biases")
                 attach_variable_summaries(W, W.name, summ_list=summary_list)
                 attach_variable_summaries(b, b.name, summ_list=summary_list)
 
