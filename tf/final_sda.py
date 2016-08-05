@@ -35,7 +35,7 @@ Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
 ENCODED_X_PATH = "../data/x_test_new_rose.csv"
 
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
-TENSORBOARD_LOG_STEP = 50
+TENSORBOARD_LOG_STEP = 100
 
 
 """
@@ -146,11 +146,11 @@ def attach_scalar_summary(var, name, summ_list):
     summ_list.append(summ)
 
 
-def weight_variable(input_dim, output_dim, name=None, strech_factor=1, dtype=tf.float32):
+def weight_variable(input_dim, output_dim, name=None, stretch_factor=1, dtype=tf.float32):
     limit = sqrt(6 / (input_dim + output_dim))
     initial = tf.random_uniform(shape=[input_dim, output_dim],
-                                minval=-(strech_factor * limit),
-                                maxval=strech_factor * limit,
+                                minval=-(stretch_factor * limit),
+                                maxval=stretch_factor * limit,
                                 dtype=dtype)
     return tf.Variable(initial, name=name)
 
@@ -420,7 +420,7 @@ class SDAutoencoder:
             input_tensor = self.hidden_layers[i].encode(input_tensor, use_variables=use_variables)
         return input_tensor
 
-    def pretrain_layer(self, depth, batch_generator, act=tf.nn.sigmoid):
+    def pretrain_layer(self, depth, batch_generator):
         sess = self.sess
 
         print("Starting to pretrain layer %d." % depth)
@@ -436,8 +436,9 @@ class SDAutoencoder:
                 x_corrupt = self.corrupt(x_latent, corruption_level=self.noise)
 
             with tf.name_scope("encoding_vars"):
+                stretch_factor = 4 if self.loss == "sigmoid" else 1
                 encode = {
-                    "weights": weight_variable(input_dim, output_dim, name="weights"),
+                    "weights": weight_variable(input_dim, output_dim, name="weights", stretch_factor=stretch_factor),
                     "biases": bias_variable(output_dim, initial_value=0, name="biases")
                 }
                 attach_variable_summaries(encode["weights"], encode["weights"].name, summ_list=summary_list)
@@ -452,8 +453,8 @@ class SDAutoencoder:
                 attach_variable_summaries(decode["biases"], decode["biases"].name, summ_list=summary_list)
 
             with tf.name_scope("encoded_and_decoded"):
-                encoded = act(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
-                decoded = tf.matmul(encoded, decode["weights"]) + decode["biases"]
+                encoded = hidden_layer.activate(tf.matmul(x_corrupt, encode["weights"]) + encode["biases"])
+                decoded = hidden_layer.activate(tf.matmul(encoded, decode["weights"]) + decode["biases"])
                 attach_variable_summaries(encoded, "encoded", summ_list=summary_list)
                 attach_variable_summaries(decoded, "decoded", summ_list=summary_list)
 
@@ -485,8 +486,8 @@ class SDAutoencoder:
                     pretrain_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Remove
-                # if step > 2:
-                #     break
+                if step > 2:
+                    break
 
                 step += 1
 
@@ -494,14 +495,14 @@ class SDAutoencoder:
             hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
-    def get_loss(self, tensor_1, tensor_2):
-        """tensor_1: labels, tensor_2: values"""
+    def get_loss(self, labels, values):
+        """Note: cross-entropy should only be used when the values of both tensors are between 0 and 1."""
         if self.loss == "rmse":
-            return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(tensor_1, tensor_2))))
+            return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(labels, values))))
         elif self.loss == "cross-entropy":
             return tf.reduce_mean(-tf.reduce_sum(
-                tensor_1 * tf.log(tensor_2) + (1 - tensor_1) * tf.log(1 - tensor_2), reduction_indices=[1]
-            ))  # FIXME: Check to verify correctness of math
+                labels * tf.log(values) + (1 - labels) * tf.log(1 - values), reduction_indices=[1]
+            ))
 
     def create_new_layers(self, dims, activations):
         """Creates and sets up template layers (un-pretrained) for the network based on dimensions
@@ -527,7 +528,7 @@ class SDAutoencoder:
         print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
             x_train_gen = x_train_gen_f()
-            self.pretrain_layer(i, x_train_gen, act=tf.nn.sigmoid)
+            self.pretrain_layer(i, x_train_gen)
         print("Finished pretraining of autoencoder network.")
 
     @stopwatch
@@ -535,7 +536,7 @@ class SDAutoencoder:
         print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
             x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs-1)
-            self.pretrain_layer(i, x_train, act=tf.nn.sigmoid)
+            self.pretrain_layer(i, x_train)
         print("Finished pretraining of autoencoder network.")
 
     @stopwatch
@@ -565,7 +566,7 @@ class SDAutoencoder:
             should be binary, then the output_dim = 2."""
             with tf.name_scope("softmax_variables"):
                 W = weight_variable(self.output_dim, output_dim, name="weights")
-                b = bias_variable(output_dim, initial_value=1/output_dim, name="biases")
+                b = bias_variable(output_dim, initial_value=0, name="biases")
                 attach_variable_summaries(W, W.name, summ_list=summary_list)
                 attach_variable_summaries(b, b.name, summ_list=summary_list)
 
@@ -614,8 +615,8 @@ class SDAutoencoder:
                     train_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Debug, remove
-                # if step > 2:
-                #     break
+                if step > 2:
+                    break
 
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
                 step += 1
@@ -630,10 +631,10 @@ class SDAutoencoder:
 def main():
     sess = tf.Session()
     sda = SDAutoencoder(dims=[3997, 500, 500, 500],
-                        activations=["tanh", "tanh", "tanh"],
+                        activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.05,
-                        loss="rmse",
+                        loss="cross-entropy",
                         print_step=50)
 
     sda.pretrain_network(X_TRAIN_PATH)

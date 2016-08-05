@@ -9,18 +9,13 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/ed/4k/outputs/ed_pred_ys_8_4.csv"
-TRANSFORMED_PATH = "../data/ed/4k/outputs/ed_x_test_transformed_8_4.csv"
+OUTPUT_PATH = "../data/ed/4k/outputs/ed_pred_ys_8_5.csv"
+TRANSFORMED_PATH = "../data/ed/4k/outputs/ed_x_test_transformed_8_5.csv"
 
 X_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_x.csv"
 Y_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_y.csv"
 X_TEST_PATH = "../data/ed/4k/ED_FullReducedSAM_test_x.csv"
 Y_TEST_PATH = "../data/ed/4k/ED_FullReducedSAM_test_y.csv"
-
-# X_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_x_r.csv"
-# Y_TRAIN_PATH = "../data/rose/small/smallSAMPart01_train_y_r.csv"
-# X_TEST_PATH = "../data/rose/small/smallSAMPart01_test_x_r.csv"
-# Y_TEST_PATH = "../data/rose/small/smallSAMPart01_test_y_r.csv"
 
 VARIABLE_SAVE_PATH = "../data/ed/4k/vars/last_vars.ckpt"
 
@@ -149,8 +144,8 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
         # FIXME: Debug -- remove
-        # if step == 10:
-        #     break
+        if step == 10:
+            break
 
         accuracy_val = sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys})
         accuracy_history.append(accuracy_val)
@@ -168,10 +163,11 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
 def unsupervised():
     sess = tf.Session()
     sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
-                        activations=["tanh", "tanh", "tanh"],
+                        activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.05,
                         loss="rmse",
+                        lr=0.0001,
                         batch_size=100,
                         print_step=50)
 
@@ -190,12 +186,13 @@ def unsupervised():
 def full_test():
     sess = tf.Session()
     sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
-                        activations=["tanh", "tanh", "tanh"],
+                        activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.20,
-                        loss="rmse",
-                        batch_size=100,
-                        print_step=100)
+                        loss="cross-entropy",
+                        lr=0.0001,
+                        batch_size=50,
+                        print_step=500)
 
     sda.pretrain_network(X_TRAIN_PATH, epochs=10)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=50)
