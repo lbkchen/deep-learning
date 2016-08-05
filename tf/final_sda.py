@@ -486,8 +486,8 @@ class SDAutoencoder:
                     pretrain_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Remove
-                if step > 2:
-                    break
+                # if step > 2:
+                #     break
 
                 step += 1
 
@@ -615,8 +615,8 @@ class SDAutoencoder:
                     train_writer.add_summary(summary, global_step=step)
 
                 # FIXME: Debug, remove
-                if step > 2:
-                    break
+                # if step > 2:
+                #     break
 
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
                 step += 1

@@ -144,8 +144,8 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
         # FIXME: Debug -- remove
-        if step == 10:
-            break
+        # if step == 10:
+        #     break
 
         accuracy_val = sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys})
         accuracy_history.append(accuracy_val)
