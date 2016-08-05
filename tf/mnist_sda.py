@@ -30,8 +30,8 @@ def main():
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.2,
-                        loss="rmse",
-                        lr=0.001)
+                        loss="cross-entropy",
+                        lr=0.0001)
 
     mnist_train_gen_f = lambda: get_mnist_batch_xs_generator(True, batch_size=100, batch_limit=5000)
 

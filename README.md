@@ -44,14 +44,15 @@ sda.write_encoded_input(filepath="../data/transformed.csv", X_TEST_PATH)
 For an example of how training is performed and subsequent accuracy is evaluated, a basic procedure is implemented on the MNIST data set in `tf/mnist_sda.py`.
 
 ## Performance
-Testing on the MNIST data set, the softmax classifier on top of features extracted from the deep feature learning of the SDA can achieve approximately **97.7%** accuracy in identifying the digits. To achieve this result, the model in `tf/mnist_sda.py` is set up with the following parameters (which may not necessarily be optimal) with 400000 data points for layer-wise pretraining and 1000000 data points for fine tuning:
+Testing on the MNIST data set, the softmax classifier on top of features extracted from the deep feature learning of the SDA can achieve approximately **98.1%** accuracy in identifying the digits. To achieve this result, the model in `tf/mnist_sda.py` is set up with the following parameters (which may not necessarily be optimal) with 500000 data points for layer-wise pretraining and 3000000 data points for fine tuning:
 
 ```python
 sda = SDAutoencoder(dims=[784, 400, 200, 80],
                     activations=["sigmoid", "sigmoid", "sigmoid"],
                     sess=sess,
-                    noise=0.05,
-                    loss="rmse")
+                    noise=0.20,
+                    loss="cross-entropy",
+                    lr=0.0001)
 ```
 Total execution time for feature learning, training, and evaluation was just under 9 minutes on my 1.3 GHz MacAir processor. This result improves upon the benchmark of 92% achieved by just a [simple softmax classifier](https://www.tensorflow.org/versions/r0.9/tutorials/mnist/beginners/index.html#mnist-for-ml-beginners) without feature learning. It is also comparable to some simple 2D convolutional network models, which are optimized to take advantage of the 2D structures in image data.
 

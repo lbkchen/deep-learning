@@ -307,8 +307,9 @@ class SDAutoencoder:
         self.print_step = print_step
 
         self.check_assertions()
-        print("Initialized SDA network with dims %s, noise %s, loss %s, learning rate %s, and batch_size %s."
-              % (dims, self.noise, self.loss, self.lr, self.batch_size))
+        print("Initialized SDA network with dims %s, activations %s, noise %s, "
+              "loss %s, learning rate %s, and batch size %s."
+              % (dims, activations, self.noise, self.loss, self.lr, self.batch_size))
 
     @property
     def is_pretrained(self):
@@ -495,13 +496,13 @@ class SDAutoencoder:
             hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
-    def get_loss(self, labels, values):
+    def get_loss(self, labels, values, epsilon=1e-10):
         """Note: cross-entropy should only be used when the values of both tensors are between 0 and 1."""
         if self.loss == "rmse":
             return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(labels, values))))
         elif self.loss == "cross-entropy":
             return tf.reduce_mean(-tf.reduce_sum(
-                labels * tf.log(values) + (1 - labels) * tf.log(1 - values), reduction_indices=[1]
+                labels * tf.log(values + epsilon) + (1 - labels) * tf.log(1 - values + epsilon), reduction_indices=[1]
             ))
 
     def create_new_layers(self, dims, activations):
