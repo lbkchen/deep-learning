@@ -9,13 +9,13 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/ed/4k/outputs/ed_pred_ys_8_8.csv"
-TRANSFORMED_PATH = "../data/ed/4k/outputs/ed_x_test_transformed_8_8.csv"
+OUTPUT_PATH = "../data/ip/4k/outputs/ip_pred_ys_8_8.csv"
+TRANSFORMED_PATH = "../data/ip/4k/outputs/ip_x_test_transformed_8_8.csv"
 
-X_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_x.csv"
-Y_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_y.csv"
-X_TEST_PATH = "../data/ed/4k/ED_FullReducedSAM_test_x.csv"
-Y_TEST_PATH = "../data/ed/4k/ED_FullReducedSAM_test_y.csv"
+X_TRAIN_PATH = "../data/ip/4k/FullReducedSAMTable_train_x.csv"
+Y_TRAIN_PATH = "../data/ip/4k/FullReducedSAMTable_train_y.csv"
+X_TEST_PATH = "../data/ip/4k/FullReducedSAMTable_test_x.csv"
+Y_TEST_PATH = "../data/ip/4k/FullReducedSAMTable_test_y.csv"
 
 VARIABLE_SAVE_PATH = "../data/ed/4k/vars/last_vars.ckpt"
 

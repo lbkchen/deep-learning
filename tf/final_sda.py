@@ -22,18 +22,6 @@ from functools import wraps
 ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
-# X_TRAIN_PATH = "../data/splits/small/PXTrainSAMsmall.csv"
-# Y_TRAIN_PATH = "../data/splits/small/OPYTrainSAMsmall.csv"
-# X_TEST_PATH = "../data/splits/small/PXTestSAMsmall.csv"
-# Y_TEST_PATH = "../data/splits/small/YTestSAMsmall.csv"
-# ENCODED_X_PATH = "../data/x_test_transformed_SAM.csv"
-
-X_TRAIN_PATH = "../data/rose/SAMPart01_train_x_r.csv"
-Y_TRAIN_PATH = "../data/rose/SAMPart01_train_y_r.csv"
-X_TEST_PATH = "../data/rose/SAMPart01_test_x_r.csv"
-Y_TEST_PATH = "../data/rose/SAMPart01_test_y_r.csv"
-ENCODED_X_PATH = "../data/x_test_new_rose.csv"
-
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
 TENSORBOARD_LOG_STEP = 100
 
@@ -627,21 +615,3 @@ class SDAutoencoder:
             tuned_params = {"weights": sess.run(W), "biases": sess.run(b)}
 
             return tuned_params
-
-
-def main():
-    sess = tf.Session()
-    sda = SDAutoencoder(dims=[3997, 500, 500, 500],
-                        activations=["sigmoid", "sigmoid", "sigmoid"],
-                        sess=sess,
-                        noise=0.05,
-                        loss="cross-entropy",
-                        print_step=50)
-
-    sda.pretrain_network(X_TRAIN_PATH)
-    sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2)
-    sda.write_encoded_input(ENCODED_X_PATH, X_TEST_PATH)
-
-
-if __name__ == "__main__":
-    main()
