@@ -29,14 +29,14 @@ def main():
     sda = SDAutoencoder(dims=[784, 400, 200, 80],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
-                        noise=0.2,
+                        noise=0.25,
                         loss="cross-entropy",
                         lr=0.0001)
 
     mnist_train_gen_f = lambda: get_mnist_batch_xs_generator(True, batch_size=100, batch_limit=5000)
 
     sda.pretrain_network_gen(mnist_train_gen_f)
-    trained_parameters = sda.finetune_parameters_gen(get_mnist_batch_generator(True, batch_size=100, batch_limit=30000),
+    trained_parameters = sda.finetune_parameters_gen(get_mnist_batch_generator(True, batch_size=100, batch_limit=50000),
                                                      output_dim=10)
     transformed_filepath = "../data/mnist_test_transformed.csv"
     test_ys_filepath = "../data/mnist_test_ys.csv"
