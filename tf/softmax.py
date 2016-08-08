@@ -9,8 +9,8 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/ed/4k/outputs/ed_pred_ys_8_5.csv"
-TRANSFORMED_PATH = "../data/ed/4k/outputs/ed_x_test_transformed_8_5.csv"
+OUTPUT_PATH = "../data/ed/4k/outputs/ed_pred_ys_8_8.csv"
+TRANSFORMED_PATH = "../data/ed/4k/outputs/ed_x_test_transformed_8_8.csv"
 
 X_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_x.csv"
 Y_TRAIN_PATH = "../data/ed/4k/ED_FullReducedSAM_train_y.csv"
@@ -185,16 +185,16 @@ def unsupervised():
 @stopwatch
 def full_test():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[4000, 1000, 500, 200],
+    sda = SDAutoencoder(dims=[4000, 400, 400, 400],
                         activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.20,
                         loss="cross-entropy",
-                        lr=0.0001,
+                        lr=0.00001,
                         batch_size=50,
                         print_step=500)
 
-    sda.pretrain_network(X_TRAIN_PATH, epochs=10)
+    sda.pretrain_network(X_TRAIN_PATH, epochs=2)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=50)
     sda.write_encoded_input(TRANSFORMED_PATH, X_TEST_PATH)
     sda.save_variables(VARIABLE_SAVE_PATH)

@@ -64,6 +64,6 @@ In the future, we plan to do additional testing to optimize hyperparameters in t
 - (To do) Implement command line execution of program.
 - (WIP) Testing for any silent bugs.
 - (To do) Enable multi-gpu support in the architecture.
-- (To do) Add compatibility for other data-loading methods
+- (WIP) Add compatibility for other data-loading methods
 - (To do) Add pre-processing methods in TF
 - (WIP) More documentation
