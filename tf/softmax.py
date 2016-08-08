@@ -190,7 +190,7 @@ def full_test():
                         sess=sess,
                         noise=0.20,
                         loss="cross-entropy",
-                        lr=0.00001,
+                        lr=0.001,
                         batch_size=50,
                         print_step=500)
 
