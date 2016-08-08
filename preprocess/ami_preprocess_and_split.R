@@ -72,9 +72,21 @@ print("Completed scaling of columns.")
 
 # Split into train and test
 print("Starting to split into train and test sets.")
-train_sample <- sample(1:nrow(Sam), floor(nrow(Sam) * 0.6667))
-Sam.train <- Sam[train_sample]
-Sam.test <- Sam[-train_sample]
+prop_in_train <- 0.6667
+cases <- which(Sam$AMI1Y_YTD == 1)
+controls <- which(Sam$AMI1Y_YTD == 0)
+train_cases <- sample(cases, floor(length(cases) * prop_in_train))
+train_controls <- sample(controls, floor(length(controls) * prop_in_train))
+test_cases <- setdiff(cases, train_cases)
+test_controls <- setdiff(controls, train_controls)
+print(str(train_cases))
+print(str(train_controls))
+print(str(test_cases))
+print(str(test_controls))
+
+Sam.train <- Sam(c(train_cases, train_controls))
+Sam.test <- Sam(c(test_cases, test_controls))
+
 rm(Sam)
 print("Finished splitting into train and test sets.")
 
