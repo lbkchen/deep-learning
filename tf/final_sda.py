@@ -25,7 +25,7 @@ ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
 TENSORBOARD_LOG_STEP = 100
 
-DEBUG = True
+DEBUG = False
 
 
 """
