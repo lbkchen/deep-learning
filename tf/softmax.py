@@ -1,4 +1,4 @@
-from final_sda import get_batch_generator, merge_generators, stopwatch, SDAutoencoder
+from final_sda import get_batch_generator, merge_generators, stopwatch, SDAutoencoder, DEBUG
 import tensorflow as tf
 import numpy as np
 
@@ -9,15 +9,15 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/ip/4k/outputs/ip_pred_ys_8_8.csv"
-TRANSFORMED_PATH = "../data/ip/4k/outputs/ip_x_test_transformed_8_8.csv"
+OUTPUT_PATH = "../data/ami/4k/outputs/pred_ys_8_8.csv"
+TRANSFORMED_PATH = "../data/ami/4k/outputs/x_test_transformed_8_8.csv"
 
-X_TRAIN_PATH = "../data/ip/4k/FullReducedSAMTable_train_x.csv"
-Y_TRAIN_PATH = "../data/ip/4k/FullReducedSAMTable_train_y.csv"
-X_TEST_PATH = "../data/ip/4k/FullReducedSAMTable_test_x.csv"
-Y_TEST_PATH = "../data/ip/4k/FullReducedSAMTable_test_y.csv"
+X_TRAIN_PATH = "../data/ami/4k/AMI_SAM_train_x.csv"
+Y_TRAIN_PATH = "../data/ami/4k/AMI_SAM_train_y.csv"
+X_TEST_PATH = "../data/ami/4k/AMI_SAM_test_x.csv"
+Y_TEST_PATH = "../data/ami/4k/AMI_SAM_test_y.csv"
 
-VARIABLE_SAVE_PATH = "../data/ed/4k/vars/last_vars.ckpt"
+VARIABLE_SAVE_PATH = "../data/ami/4k/vars/last_vars.ckpt"
 
 
 def average(lst):
@@ -143,9 +143,9 @@ def test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_f
     for batch_xs, batch_ys in xy_test_gen:
         write_data(data=sess.run(y_pred, feed_dict={x: batch_xs}), filename=output_filepath)
 
-        # FIXME: Debug -- remove
-        # if step == 10:
-        #     break
+        # Break early if debug
+        if DEBUG and step == 10:
+            break
 
         accuracy_val = sess.run(accuracy, feed_dict={x: batch_xs, y_actual: batch_ys})
         accuracy_history.append(accuracy_val)

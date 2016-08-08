@@ -79,12 +79,17 @@ train_cases <- sample(cases, floor(length(cases) * prop_in_train))
 train_controls <- sample(controls, floor(length(controls) * prop_in_train))
 test_cases <- setdiff(cases, train_cases)
 test_controls <- setdiff(controls, train_controls)
+print("Total cases:")
+print(sum(Sam$AMI1Y_YTD == 1))
 print(str(cases))
 print(str(controls))
 print(str(train_cases))
 print(str(train_controls))
 print(str(test_cases))
 print(str(test_controls))
+
+print(length(train_cases))
+print(length(test_cases))
 
 Sam.train <- Sam[c(train_cases, train_controls)]
 Sam.test <- Sam[c(test_cases, test_controls)]

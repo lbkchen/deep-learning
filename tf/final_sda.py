@@ -25,6 +25,8 @@ ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
 TENSORBOARD_LOG_STEP = 100
 
+DEBUG = True
+
 
 """
 ##################
@@ -474,9 +476,9 @@ class SDAutoencoder:
                     summary = sess.run(merged, feed_dict={x_original: batch_x_original})
                     pretrain_writer.add_summary(summary, global_step=step)
 
-                # FIXME: Remove
-                # if step > 2:
-                #     break
+                # Break for debugging purposes
+                if DEBUG and step > 5:
+                    break
 
                 step += 1
 
@@ -603,9 +605,9 @@ class SDAutoencoder:
                     summary = sess.run(merged, feed_dict={x: batch_xs, y_actual: batch_ys})
                     train_writer.add_summary(summary, global_step=step)
 
-                # FIXME: Debug, remove
-                # if step > 2:
-                #     break
+                # For debugging, break early.
+                if DEBUG and step > 5:
+                    break
 
                 sess.run(train_step, feed_dict={x: batch_xs, y_actual: batch_ys})
                 step += 1
