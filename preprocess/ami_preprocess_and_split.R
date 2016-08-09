@@ -1,7 +1,7 @@
 library(data.table) # Must have data.table v1.9.7+
 library(readr)
 library(DMwR)
-library(ROSE)
+#library(ROSE)
 
 # Usage (must be run from command line)
 # Rscript <path/to/sam_table.csv> <path/to/training_ids.csv> <path/to/testing_ids.csv> <optional: base name>
@@ -70,9 +70,9 @@ print("Starting to scale table.")
 Sam <- Sam[, lapply(.SD, unitScale)]
 print("Completed scaling of columns.")
 
-# Split into train and test
+# Split into train and test 2500 
 print("Starting to split into train and test sets.")
-prop_in_train <- 0.6667
+prop_in_train <- 0.90
 cases <- which(Sam$AMI1Y_YTD == 1)
 controls <- which(Sam$AMI1Y_YTD == 0)
 train_cases <- sample(cases, floor(length(cases) * prop_in_train))
@@ -98,24 +98,24 @@ rm(Sam)
 print("Finished splitting into train and test sets.")
 
 # SMOTE algorithm for balancing training data by interpolated over/undersampling
-# Smote parameters
-# print("Beginning to apply SMOTE algorithm.")
-# percent_to_oversample <- 500
-# percent_ratio_major_to_minor <- 100
-# Sam.train <- SMOTE(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
-#                    perc.over = percent_to_oversample, perc.under = percent_ratio_major_to_minor)
-# print("Finished applying SMOTE algorithm.")
+#Smote parameters
+print("Beginning to apply SMOTE algorithm.")
+percent_to_oversample <- 600
+percent_ratio_major_to_minor <- 200
+Sam.train <- SMOTE(AMI1Y_YTD ~ . -StatePatientID, data = Sam.train, 
+                  perc.over = percent_to_oversample, perc.under = percent_ratio_major_to_minor)
+print("Finished applying SMOTE algorithm.")
 
 # ROSE algorithm for balancing training data by over/undersampling
-print("Beginning to apply ROSE algorithm.")
-result_sample_size <- 100000
-rare_proportion <- 0.5
+#print("Beginning to apply ROSE algorithm.")
+#result_sample_size <- 100000
+#rare_proportion <- 0.5
 # Sam.train.without_factors <- Sam.train[, !c("StatePatientID", "ED_YTM"), with = FALSE]
 # Sam.train.factors <- Sam.train[, c("StatePatientID", "ED_YTM"), with = FALSE]
-Sam.train <- ovun.sample(AMI1Y_YTD ~ . -StatePatientID, data = Sam.train, 
-                         method = "both", N = result_sample_size, p = rare_proportion)$data
-Sam.train <- data.table(Sam.train)
-print("Finished applying ROSE algorithm.")
+#Sam.train <- ovun.sample(AMI1Y_YTD ~ . -StatePatientID, data = Sam.train, 
+#                         method = "both", N = result_sample_size, p = rare_proportion)$data
+#Sam.train <- data.table(Sam.train)
+#print("Finished applying ROSE algorithm.")
 
 # Shuffle train data to homogenize 0/1 y values
 print("Begin shuffle.")
