@@ -9,8 +9,8 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/ami/4k/outputs/pred_ys_8_8.csv"
-TRANSFORMED_PATH = "../data/ami/4k/outputs/x_test_transformed_8_8.csv"
+OUTPUT_PATH = "../data/ami/4k/outputs/pred_ys_8_9.csv"
+TRANSFORMED_PATH = "../data/ami/4k/outputs/x_test_transformed_8_9.csv"
 
 X_TRAIN_PATH = "../data/ami/4k/AMI_SAM_train_x.csv"
 Y_TRAIN_PATH = "../data/ami/4k/AMI_SAM_train_y.csv"
@@ -185,12 +185,12 @@ def unsupervised():
 @stopwatch
 def full_test():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[4000, 400, 400, 400],
-                        activations=["sigmoid", "sigmoid", "sigmoid"],
+    sda = SDAutoencoder(dims=[4000, 400],
+                        activations=["sigmoid"],
                         sess=sess,
                         noise=0.20,
                         loss="cross-entropy",
-                        lr=0.0001,
+                        lr=0.00001,
                         batch_size=50,
                         print_step=500)
 
