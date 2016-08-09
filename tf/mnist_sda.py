@@ -26,8 +26,8 @@ def get_mnist_batch_xs_generator(is_train, batch_size, batch_limit=100):
 
 def main():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[784, 400, 200, 80],
-                        activations=["sigmoid", "sigmoid", "sigmoid"],
+    sda = SDAutoencoder(dims=[784, 600, 400, 200, 80],
+                        activations=["sigmoid", "sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.25,
                         loss="cross-entropy",
@@ -47,7 +47,7 @@ def main():
     sess.close()
 
     test_model(parameters_dict=trained_parameters,
-               input_dim=80,
+               input_dim=sda.output_dim,
                output_dim=10,
                x_test_filepath=transformed_filepath,
                y_test_filepath=test_ys_filepath,
