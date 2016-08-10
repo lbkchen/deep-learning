@@ -194,7 +194,7 @@ def full_test():
                         batch_size=50,
                         print_step=500)
 
-    sda.pretrain_network(X_TRAIN_PATH, epochs=30)
+    sda.pretrain_network(X_TRAIN_PATH, epochs=50)
     trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=80)
     sda.write_encoded_input(TRANSFORMED_PATH, X_TEST_PATH)
     sda.save_variables(VARIABLE_SAVE_PATH)
