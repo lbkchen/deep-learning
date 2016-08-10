@@ -167,7 +167,6 @@ def unsupervised():
                         sess=sess,
                         noise=0.05,
                         loss="rmse",
-                        lr=0.0001,
                         batch_size=100,
                         print_step=50)
 
@@ -185,17 +184,18 @@ def unsupervised():
 @stopwatch
 def full_test():
     sess = tf.Session()
-    sda = SDAutoencoder(dims=[4000, 400],
-                        activations=["sigmoid"],
+    sda = SDAutoencoder(dims=[4000, 400, 400, 400],
+                        activations=["sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.20,
                         loss="cross-entropy",
-                        lr=0.00001,
+                        pretrain_lr=1e-6,
+                        finetune_lr=1e-5,
                         batch_size=50,
                         print_step=500)
 
-    sda.pretrain_network(X_TRAIN_PATH, epochs=20)
-    trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=60)
+    sda.pretrain_network(X_TRAIN_PATH, epochs=30)
+    trained_parameters = sda.finetune_parameters(X_TRAIN_PATH, Y_TRAIN_PATH, output_dim=2, epochs=80)
     sda.write_encoded_input(TRANSFORMED_PATH, X_TEST_PATH)
     sda.save_variables(VARIABLE_SAVE_PATH)
     sess.close()

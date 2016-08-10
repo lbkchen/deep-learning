@@ -44,7 +44,7 @@ sda.write_encoded_input(filepath="../data/transformed.csv", X_TEST_PATH)
 For an example of how training is performed and subsequent accuracy is evaluated, a basic procedure is implemented on the MNIST data set in `tf/mnist_sda.py`.
 
 ## Performance
-Testing on the MNIST data set, the softmax classifier on top of features extracted from the deep feature learning of the SDA can achieve approximately **98.2%** accuracy in identifying the digits. To achieve this result, the model in `tf/mnist_sda.py` is set up with the following parameters (which may not necessarily be optimal) with 500000 data points for layer-wise pretraining and 3000000 data points for fine tuning:
+Testing on the MNIST data set, the softmax classifier on top of features extracted from the deep feature learning of the SDA can achieve approximately **98.3%** accuracy in identifying the digits. To achieve this result, the model in `tf/mnist_sda.py` is set up with the following parameters (which may not necessarily be optimal) with 500000 data points for layer-wise pretraining and 3000000 data points for fine tuning:
 
 ```python
 sda = SDAutoencoder(dims=[784, 400, 200, 80],

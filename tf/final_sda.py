@@ -8,7 +8,8 @@ import tensorflow as tf
 import numpy as np
 import time
 import csv
-from math import sqrt
+import random
+from math import sqrt, ceil
 from functools import wraps
 
 
@@ -56,6 +57,14 @@ def stopwatch(f):
 """
 
 
+def file_len(filename):
+    i = 0
+    with open(filename) as f:
+        for i, line in enumerate(f):
+            pass
+    return i + 1
+
+
 def get_batch_generator(filename, batch_size, skip_header=False, repeat=0):
     """Generator that gets the net batch of batch_size x or y values
     from the given file.
@@ -93,6 +102,33 @@ def get_batch_generator(filename, batch_size, skip_header=False, repeat=0):
         if repeat > 0:
             for item in get_batch_generator(filename, batch_size, skip_header, repeat - 1):
                 yield item
+
+
+def get_random_batch_generator(batch_size, filename, paired_filename=None, repeat=0):
+    """Given a csv file `filename` and a specified batch_size, returns a generator that randomly
+    yields `batch_size` cases from the file at a time and repeats its entire set of rows for
+    `repeat` number of times.
+
+    Note: use only for smaller files, as this process will consume significant memory."""
+    def batch_list(lst):
+        return [lst[j*batch_size:(j+1)*batch_size] for j in range(int(ceil(len(lst) / batch_size)))]
+
+    for _ in range(repeat + 1):
+        with open(filename, "rt") as file:
+            if paired_filename:
+                with open(paired_filename, "rt") as paired:
+                    paired = list(zip(list(csv.reader(file)), list(csv.reader(paired))))
+                    random.shuffle(paired)
+                    lines_0, lines_1 = list(zip(*paired))
+                    lines_0, lines_1 = batch_list(lines_0), batch_list(lines_1)
+                    for batch_0, batch_1 in zip(lines_0, lines_1):
+                        yield batch_0, batch_1
+            else:
+                lines = list(csv.reader(file))
+                random.shuffle(lines)
+                lines = batch_list(lines)
+                for batch in lines:
+                    yield batch
 
 
 def repeat_generator(f_gen, multiple=2):
@@ -250,7 +286,7 @@ class SDAutoencoder:
         assert self.loss in ALLOWED_LOSSES
 
     def __init__(self, dims, activations, sess, noise=0.0, loss="cross-entropy",
-                 lr=0.001, batch_size=100, print_step=100):
+                 pretrain_lr=0.001, finetune_lr=0.001, batch_size=100, print_step=100):
         """Initializes a Stacked Denoising Autoencoder based on the dimension of each
         layer in the neural network and the activation function of each layer. SDA only
         undergoes parameter setup at initialization. Main functions to utilize the SDA are:
@@ -281,7 +317,8 @@ class SDAutoencoder:
         :param sess: A tf.Session to be used by the autoencoder
         :param noise: A double from 0 to 1 representing the amount of masking on the input (noise).
         :param loss: A string representing the loss function used.
-        :param lr: A double representing the learning rate of the optimization method.
+        :param pretrain_lr: A double representing the learning rate of the pretrain op.
+        :param finetune_lr: A double representing the learning rate of the finetune op.
         :param batch_size: The number of cases fed to the network in each batch from file.
         :param print_step: The number of batches processed before each print progress step.
         """
@@ -292,14 +329,15 @@ class SDAutoencoder:
 
         self.noise = noise
         self.loss = loss
-        self.lr = lr
+        self.pretrain_lr = pretrain_lr
+        self.finetune_lr = finetune_lr
         self.batch_size = batch_size
         self.print_step = print_step
 
         self.check_assertions()
         print("Initialized SDA network with dims %s, activations %s, noise %s, "
-              "loss %s, learning rate %s, and batch size %s."
-              % (dims, activations, self.noise, self.loss, self.lr, self.batch_size))
+              "loss %s, pretraining learning rate %s, finetuning learning rate %s, and batch size %s."
+              % (dims, activations, self.noise, self.loss, self.pretrain_lr, self.finetune_lr, self.batch_size))
 
     @property
     def is_pretrained(self):
@@ -457,7 +495,7 @@ class SDAutoencoder:
             trainable_vars = [encode["weights"], encode["biases"], decode["biases"]]
             # Only optimize variables for this layer ("greedy")
             with tf.name_scope("train_step"):
-                train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(loss, var_list=trainable_vars)
+                train_op = tf.train.AdamOptimizer(learning_rate=self.pretrain_lr).minimize(loss, var_list=trainable_vars)
             sess.run(tf.initialize_all_variables())
 
             # Merge summaries and get a summary writer
@@ -572,11 +610,11 @@ class SDAutoencoder:
 
             with tf.name_scope("cross_entropy"):
                 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_logits, y_actual))
-                attach_scalar_summary(cross_entropy, "cross_entopy", summ_list=summary_list)
+                attach_scalar_summary(cross_entropy, "cross_entropy", summ_list=summary_list)
 
             trainable_vars = self.get_all_variables(additional_vars=[W, b])
             with tf.name_scope("train_step"):
-                train_step = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(
+                train_step = tf.train.AdamOptimizer(learning_rate=self.finetune_lr).minimize(
                     cross_entropy, var_list=trainable_vars)
 
             with tf.name_scope("evaluation"):
