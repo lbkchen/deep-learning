@@ -564,15 +564,17 @@ class SDAutoencoder:
     def pretrain_network(self, x_train_path, epochs=1):
         print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
-            x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs-1)
+            # x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs-1)
+            x_train = get_random_batch_generator(self.batch_size, x_train_path, repeat=epochs-1)
             self.pretrain_layer(i, x_train)
         print("Finished pretraining of autoencoder network.")
 
     @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
-        x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
-        y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
-        xy_train = merge_generators(x_train, y_train)
+        # x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+        # y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+        # xy_train = merge_generators(x_train, y_train)
+        xy_train = get_random_batch_generator(self.batch_size, x_train_path, y_train_path, repeat=epochs - 1)
         return self.finetune_parameters_gen(xy_train_gen=xy_train, output_dim=output_dim)
 
     @stopwatch

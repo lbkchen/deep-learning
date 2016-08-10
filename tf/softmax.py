@@ -9,15 +9,15 @@ import numpy as np
 # Y_TEST_PATH = "../data/splits/OPYTestSAM.csv"
 
 # NEED TO RENAME FOR EVERY TRIAL
-OUTPUT_PATH = "../data/ami/4k/outputs/pred_ys_8_9.csv"
-TRANSFORMED_PATH = "../data/ami/4k/outputs/x_test_transformed_8_9.csv"
+OUTPUT_PATH = "../data/ami/smote4k/outputs/pred_ys_8_10.csv"
+TRANSFORMED_PATH = "../data/ami/smote4k/outputs/x_test_transformed_8_10.csv"
 
-X_TRAIN_PATH = "../data/ami/4k/AMI_SAM_train_x.csv"
-Y_TRAIN_PATH = "../data/ami/4k/AMI_SAM_train_y.csv"
-X_TEST_PATH = "../data/ami/4k/AMI_SAM_test_x.csv"
-Y_TEST_PATH = "../data/ami/4k/AMI_SAM_test_y.csv"
+X_TRAIN_PATH = "../data/ami/smote4k/AMI_SAM_train_x.csv"
+Y_TRAIN_PATH = "../data/ami/smote4k/AMI_SAM_train_y.csv"
+X_TEST_PATH = "../data/ami/smote4k/AMI_SAM_test_x.csv"
+Y_TEST_PATH = "../data/ami/smote4k/AMI_SAM_test_y.csv"
 
-VARIABLE_SAVE_PATH = "../data/ami/4k/vars/last_vars.ckpt"
+VARIABLE_SAVE_PATH = "../data/ami/smote4k/vars/last_vars.ckpt"
 
 
 def average(lst):
