@@ -185,7 +185,7 @@ def unsupervised():
 def full_test():
     sess = tf.Session()
     sda = SDAutoencoder(dims=[4000, 400, 400, 400],
-                        activations=["sigmoid", "sigmoid"],
+                        activations=["sigmoid", "sigmoid", "sigmoid"],
                         sess=sess,
                         noise=0.20,
                         loss="cross-entropy",
