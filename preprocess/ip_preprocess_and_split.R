@@ -89,8 +89,8 @@ print("Finished splitting into train and test sets.")
 # SMOTE algorithm for balancing training data by interpolated over/undersampling
 # Smote parameters
 print("Beginning to apply SMOTE algorithm.")
-percent_to_oversample <- 500
-percent_ratio_major_to_minor <- 100
+percent_to_oversample <- 180
+percent_ratio_major_to_minor <- 200
 Sam.train <- SMOTE(IP_YTM ~ . -StatePatientID -ED_YTM, data = Sam.train, 
                    perc.over = percent_to_oversample, perc.under = percent_ratio_major_to_minor)
 print("Finished applying SMOTE algorithm.")
