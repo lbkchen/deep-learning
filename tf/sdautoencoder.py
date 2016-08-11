@@ -1,8 +1,4 @@
-"""
-Stacked Denoising Autoencoder Implementation
-
-Ken Chen
-"""
+"""Stacked Denoising Autoencoder Implementation"""
 
 import tensorflow as tf
 import numpy as np
@@ -12,6 +8,10 @@ import random
 from math import sqrt, ceil
 from functools import wraps
 
+__author__ = "Ken Chen"
+__copyright__ = "Copyright (C) 2016 Ken Chen, HBI Solutions, Inc."
+__version__ = "1.0"
+
 
 """
 ###########################
@@ -20,7 +20,7 @@ from functools import wraps
 """
 
 
-ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu", "softmax"]
+ALLOWED_ACTIVATIONS = ["sigmoid", "tanh", "relu"]
 ALLOWED_LOSSES = ["rmse", "cross-entropy"]
 
 TENSORBOARD_LOGDIR = "../logs/tensorboard"
@@ -75,7 +75,7 @@ def get_batch_generator(filename, batch_size, repeat=0):
     :param repeat: An int specifying the number of times to repeat going through
         the file. Repeat of 2 will return a generator that iterates through the
         full file three times before stopping iteration.
-    :return:
+    :return: A generator.
     """
     assert repeat < 1000, "Recursion depth will be exceeded."
     with open(filename, "rt") as file:
@@ -106,7 +106,17 @@ def get_random_batch_generator(batch_size, filename, paired_filename=None, repea
     yields `batch_size` cases from the file at a time and repeats its entire set of rows for
     `repeat` number of times.
 
-    Note: use only for smaller files, as this process will consume significant memory."""
+    Note: use only for smaller files, as this process will consume significant memory.
+
+    :param batch_size: An int, the number of lines to include in each batch.
+    :param filename: A string, the path to the file to be batched.
+    :param paired_filename: A string (optional), the path to another file to be batched together
+        with `filename`.
+    :param repeat: An int, the number of times to repeat batching of the entire dataset.
+    :return: If `paired_filename` is not None, returns a generator that yields corresponding tuples
+        of batches from both datasets. If `paired_filename` is None, returns a generator that yields
+        just batches from `filename`.
+    """
     def batch_list(lst):
         return [lst[j*batch_size:(j+1)*batch_size] for j in range(int(ceil(len(lst) / batch_size)))]
 
@@ -300,8 +310,6 @@ class NNLayer:
             return tf.nn.tanh(input_tensor, name=name)
         if self.activation == "relu":
             return tf.nn.relu(input_tensor, name=name)
-        if self.activation == "softmax":
-            return tf.nn.softmax(input_tensor, name=name)
         else:
             print("Activation function not valid. Using the identity.")
             return input_tensor
@@ -404,11 +412,17 @@ class SDAutoencoder:
             layer.update_wb(self.sess)
 
     def save_variables(self, filepath):
+        """Saves all Tensorflow variables in the desired filepath."""
         saver = tf.train.Saver()
         save_path = saver.save(self.sess, filepath)
         print("Model saved in file: %s" % save_path)
 
-    def write_data(self, data, filename):  # FIXME: Should be a static function and outside of class
+    ################
+    # WRITING DATA #
+    ################
+
+    @staticmethod
+    def write_data(data, filename):
         """Writes data in data_tensor and appends to the end of filename in csv format.
 
         :param data: A 2-dimensional numpy array.
@@ -420,6 +434,10 @@ class SDAutoencoder:
 
     @stopwatch
     def write_encoded_input(self, filepath, x_test_path):
+        """Reads from x_test_path and encodes the input through the entire model. Then
+        writes the encoded result to filepath. Call this function after pretraining and
+        fine-tuning to get the newly learned features.
+        """
         x_test = get_batch_generator(x_test_path, self.batch_size)
         self.write_encoded_input_gen(filepath, x_test_gen=x_test)
 
@@ -441,12 +459,13 @@ class SDAutoencoder:
         print("Written encoded input to file %s" % filepath)
 
     def write_encoded_input_with_ys(self, filepath_x, filepath_y, xy_test_gen):
-        """For use in testing MNIST.
+        """For use in testing MNIST. Writes the encoded x values along with their corresponding
+        y values to file.
 
-        :param filepath_x:
-        :param filepath_y:
-        :param xy_test_gen:
-        :return:
+        :param filepath_x: A string, the filepath to store the encoded x values.
+        :param filepath_y: A string, the filepath to store the y values.
+        :param xy_test_gen: A generator that yields tuples of x and y test values.
+        :return: None
         """
         sess = self.sess
         x_input = tf.placeholder(tf.float32, shape=[None, self.input_dim])
@@ -457,6 +476,10 @@ class SDAutoencoder:
             self.write_data(sess.run(x_encoded, feed_dict={x_input: x_batch}), filepath_x)
             self.write_data(y_batch, filepath_y)
         print("Written encoded input to file %s and test ys to %s" % (filepath_x, filepath_y))
+
+    ###################
+    # GENERAL UTILITY #
+    ###################
 
     def get_encoded_input(self, input_tensor, depth, use_variables=False):
         """Performs an encoding on input_tensor through the neural network depending on depth.
@@ -476,7 +499,73 @@ class SDAutoencoder:
             input_tensor = self.hidden_layers[i].encode(input_tensor, use_variables=use_variables)
         return input_tensor
 
+    def get_loss(self, labels, values, epsilon=1e-10):
+        """Returns the loss value between labels and values based on the method, either rmse
+        or cross-entropy.
+
+        Note: cross-entropy should only be used when the values are between 0 and 1."""
+        if self.loss == "rmse":
+            return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(labels, values))))
+        elif self.loss == "cross-entropy":
+            return tf.reduce_mean(-tf.reduce_sum(
+                labels * tf.log(values + epsilon) + (1 - labels) * tf.log(1 - values + epsilon), reduction_indices=[1]
+            ))
+
+    @staticmethod
+    def create_new_layers(dims, activations):
+        """Creates and sets up template layers (un-pretrained) for the network based on dimensions
+        and activation functions.
+
+        :param dims: Ex. [784, 200, 10]
+        :param activations: Ex. ['relu', 'relu']
+        :return: [NNLayer(input_dim=784, output_dim=200), NNLayer(input_dim=200, output_dim=10)]
+        """
+        assert len(dims) >= 2 and len(activations) >= 1, "Invalid number of layers given by `dims` and `activations`."
+        assert set(activations + ALLOWED_ACTIVATIONS) == set(ALLOWED_ACTIVATIONS), "Incorrect activation(s) given."
+        assert len(dims) == len(activations) + 1, "Incorrect number of layers/activations."
+        return [NNLayer(dims[i], dims[i + 1], "hidden_layer_" + str(i), activations[i])
+                for i in range(len(activations))]
+
+    ###############
+    # PRETRAINING #
+    ###############
+
+    @stopwatch
+    def pretrain_network(self, x_train_path, epochs=1, batch_method="random"):
+        """Pretrains the network using x-train values from a csv file.
+
+        :param x_train_path: A string: the filepath to the train data.
+        :param epochs: The number of epochs to iterate through the train data.
+        :param batch_method: A string, either "random" or "sequential", indicating the method to
+            use for batch generation (get_random_batch_generator vs. get_batch_generator).
+        """
+        print("Starting to pretrain autoencoder network.")
+        for i in range(len(self.hidden_layers)):
+            if batch_method == "random":
+                x_train = get_random_batch_generator(self.batch_size, x_train_path, repeat=epochs - 1)
+            else:
+                x_train = get_batch_generator(x_train_path, self.batch_size, repeat=epochs-1)
+            self.pretrain_layer(i, x_train)
+        print("Finished pretraining of autoencoder network.")
+
+    @stopwatch
+    def pretrain_network_gen(self, x_train_gen_f):
+        """Pretrains the network with a generator supplying input. Use for testing MNIST.
+
+        :param x_train_gen_f: A function that when called with no arguments returns a generator
+            that iterates through the entire train dataset.
+        :return: None
+        """
+        print("Starting to pretrain autoencoder network.")
+        for i in range(len(self.hidden_layers)):
+            x_train_gen = x_train_gen_f()
+            self.pretrain_layer(i, x_train_gen)
+        print("Finished pretraining of autoencoder network.")
+
     def pretrain_layer(self, depth, batch_generator):
+        """Pretrains the layer at depth `depth` feeding data from batch_generator. Do not call
+        this method externally unless specific pretraining of a particular layer is required.
+        Use `pretrain_network` instead."""
         sess = self.sess
 
         print("Starting to pretrain layer %d." % depth)
@@ -551,61 +640,34 @@ class SDAutoencoder:
             hidden_layer.set_wb(weights=sess.run(encode["weights"]), biases=sess.run(encode["biases"]))
             print("Finished pretraining of layer %d. Updated layer weights and biases." % depth)
 
-    def get_loss(self, labels, values, epsilon=1e-10):
-        """Note: cross-entropy should only be used when the values of both tensors are between 0 and 1."""
-        if self.loss == "rmse":
-            return tf.sqrt(tf.reduce_mean(tf.square(tf.sub(labels, values))))
-        elif self.loss == "cross-entropy":
-            return tf.reduce_mean(-tf.reduce_sum(
-                labels * tf.log(values + epsilon) + (1 - labels) * tf.log(1 - values + epsilon), reduction_indices=[1]
-            ))
+    ##############
+    # FINETUNING #
+    ##############
 
-    def create_new_layers(self, dims, activations):
-        """Creates and sets up template layers (un-pretrained) for the network based on dimensions
-        and activation functions.
+    @stopwatch
+    def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1, batch_method="random"):
+        """Performs fine tuning on all parameters of the neural network plus two additional softmax
+        variables. Call this method after `pretrain_network` is complete. Y values should be represented
+        in one-hot format.
 
-        :param dims: Ex. [784, 200, 10]
-        :param activations: Ex. ['relu', 'relu']
-        :return: [NNLayer(input_dim=784, output_dim=200), NNLayer(input_dim=200, output_dim=10)]
+        :param x_train_path: A string, the path to the x train values.
+        :param y_train_path: A string, the path to the y train values.
+        :param output_dim: An int, the number of classes in the target classification problem. Ex: 10 for MNIST.
+        :param epochs: An int, the number of iterations to tune through the entire dataset.
+        :param batch_method: A string, either 'random' or 'sequential', to indicate how batches are retrieved.
+        :return: The tuned softmax parameters (weights and biases) of the classification layer.
         """
-        assert set(activations + ALLOWED_ACTIVATIONS) == set(ALLOWED_ACTIVATIONS), "Incorrect activation(s) given."
-        assert len(dims) == len(activations) + 1, "Incorrect number of layers/activations."
-        return [NNLayer(dims[i], dims[i + 1], "hidden_layer_" + str(i), activations[i])
-                for i in range(len(activations))]
-
-    @stopwatch
-    def pretrain_network_gen(self, x_train_gen_f):
-        """Pretrains the network with a generator supplying input. Use for testing MNIST.
-
-        :param x_train_gen_f: A function that when called with no arguments returns a generator
-            that iterates through the entire train dataset.
-        :return: None
-        """
-        print("Starting to pretrain autoencoder network.")
-        for i in range(len(self.hidden_layers)):
-            x_train_gen = x_train_gen_f()
-            self.pretrain_layer(i, x_train_gen)
-        print("Finished pretraining of autoencoder network.")
-
-    @stopwatch
-    def pretrain_network(self, x_train_path, epochs=1):
-        print("Starting to pretrain autoencoder network.")
-        for i in range(len(self.hidden_layers)):
-            # x_train = get_batch_generator(x_train_path, self.batch_size, repeat=epochs-1)
-            x_train = get_random_batch_generator(self.batch_size, x_train_path, repeat=epochs-1)
-            self.pretrain_layer(i, x_train)
-        print("Finished pretraining of autoencoder network.")
-
-    @stopwatch
-    def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
-        # x_train = get_batch_generator(x_train_path, self.batch_size, repeat=epochs - 1)
-        # y_train = get_batch_generator(y_train_path, self.batch_size, repeat=epochs - 1)
-        # xy_train = merge_generators(x_train, y_train)
-        xy_train = get_random_batch_generator(self.batch_size, x_train_path, y_train_path, repeat=epochs - 1)
+        if batch_method == "random":
+            xy_train = get_random_batch_generator(self.batch_size, x_train_path, y_train_path, repeat=epochs - 1)
+        else:
+            x_train = get_batch_generator(x_train_path, self.batch_size, repeat=epochs - 1)
+            y_train = get_batch_generator(y_train_path, self.batch_size, repeat=epochs - 1)
+            xy_train = merge_generators(x_train, y_train)
         return self.finetune_parameters_gen(xy_train_gen=xy_train, output_dim=output_dim)
 
     @stopwatch
     def finetune_parameters_gen(self, xy_train_gen, output_dim):
+        """An implementation of finetuning to support data feeding from generators."""
         sess = self.sess
         summary_list = []
 

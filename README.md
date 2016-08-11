@@ -9,7 +9,7 @@ During unsupervised pre-training, parameters in the neural network are learned a
 Following this configuration, the input data can be read into the model and encoded into a different representation depending on the user's desired parameters (layer dimensions, activations, noise level, etc.). For example, this technique can be used to transform a sparse feature space of 30000 dimensions into a dense feature space of 400 dimensions as a primer for better training performance.
 
 ## Usage
-The current working source code is located in `tf/final_sda.py`. Currently reads train/test data from csv files in batch style. The following three datasets must be present for the SDA to output newly learned features:
+The current working source code is located in `tf/sdautoencoder.py`. Currently reads train/test data from csv files in batch style. The following three datasets must be present for the SDA to output newly learned features:
 - X training values
 - Y training values
 - X testing values
