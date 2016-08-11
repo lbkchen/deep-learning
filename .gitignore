@@ -48,6 +48,7 @@ logs
 
 # Exclude old stuff
 old
+misc
 
 # Exclude training code
 training
