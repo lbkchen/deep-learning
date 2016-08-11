@@ -4,7 +4,7 @@ Deep learning project in TensorFlow and Torch to analyze clinical health records
 ## Background
 This project uses **Stacked Denoising Autoencoders (SDA)** [[P. Vincent]](http://jmlr.csail.mit.edu/papers/volume11/vincent10a/vincent10a.pdf) to perform feature learning on a given dataset. Two overall steps are necessary for fully configuring the network to encode the input data: **pre-training**, and **fine-tuning**.
 
-During unsupervised pre-training, parameters in the neural network are learned and configured layer by layer greedily by minimizing the reconstruction loss between each input and its decoded counterpart. A supervised softmax classifier on top of the network provides fine tuning for all parameters of the network (weights and biases for each layer).
+During unsupervised pre-training, parameters in the neural network are learned and configured layer by layer greedily by minimizing the reconstruction loss between each input and its decoded counterpart. A supervised softmax classifier on top of the network provides fine tuning for all parameters of the network (weights and biases for each autoencoder layer plus softmax weights/biases).
 
 Following this configuration, the input data can be read into the model and encoded into a different representation depending on the user's desired parameters (layer dimensions, activations, noise level, etc.). For example, this technique can be used to transform a sparse feature space of 30000 dimensions into a dense feature space of 400 dimensions as a primer for better training performance.
 
@@ -52,9 +52,10 @@ sda = SDAutoencoder(dims=[784, 400, 200, 80],
                     sess=sess,
                     noise=0.20,
                     loss="cross-entropy",
-                    lr=0.0001)
+                    pretrain_lr=0.0001,
+                    finetune_lr=0.0001)
 ```
-Total execution time for feature learning, training, and evaluation was just under 9 minutes on my 1.3 GHz MacAir processor. This result improves upon the benchmark of 92% achieved by just a [simple softmax classifier](https://www.tensorflow.org/versions/r0.9/tutorials/mnist/beginners/index.html#mnist-for-ml-beginners) without feature learning. It is also comparable to some simple 2D convolutional network models, which are optimized to take advantage of the 2D structures in image data.
+Total execution time for feature learning, training, and evaluation was just under 9 minutes on my 1.3 GHz MacAir processor (under a minute on a GPU machine using one GTX 1080). This result improves upon the benchmark of 92% achieved by just a [simple softmax classifier](https://www.tensorflow.org/versions/r0.9/tutorials/mnist/beginners/index.html#mnist-for-ml-beginners) without feature learning. It is also comparable to some simple 2D convolutional network models, which are optimized to take advantage of the 2D structures in image data.
 
 In the future, we plan to do additional testing to optimize hyperparameters in the model and improve execution speed in various parts of the model.
 
