@@ -1,4 +1,4 @@
-from final_sda import get_batch_generator, merge_generators, stopwatch, SDAutoencoder, DEBUG
+from sdautoencoder import SDAutoencoder, get_batch_generator, merge_generators, stopwatch, DEBUG
 import tensorflow as tf
 import numpy as np
 
