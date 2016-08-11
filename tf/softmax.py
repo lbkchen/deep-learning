@@ -64,9 +64,9 @@ def write_data(data, filename):  # FIXME: Copied from sda, should refactor to st
 #     sess = tf.Session()
 #     sess.run(tf.initialize_all_variables())
 #     x_train = get_batch_generator(filename=x_train_filepath, batch_size=batch_size,
-#                                   skip_header=False, repeat=epochs - 1)
+#                                   repeat=epochs - 1)
 #     y_train = get_batch_generator(filename=y_train_filepath, batch_size=batch_size,
-#                                   skip_header=True, repeat=epochs - 1)
+#                                   repeat=epochs - 1)
 #     step = 0
 #     accuracy_history = []
 #     for batch_xs, batch_ys in zip(x_train, y_train):
@@ -104,8 +104,8 @@ def write_data(data, filename):  # FIXME: Copied from sda, should refactor to st
 @stopwatch
 def test_model(parameters_dict, input_dim, output_dim, x_test_filepath, y_test_filepath, output_filepath,
                batch_size=100, print_step=100):
-    x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size, skip_header=False)
-    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size, skip_header=True)  # FIXME: Check if headers
+    x_test = get_batch_generator(filename=x_test_filepath, batch_size=batch_size)
+    y_test = get_batch_generator(filename=y_test_filepath, batch_size=batch_size)  # FIXME: Check if headers
     xy_test_gen = merge_generators(x_test, y_test)
     test_model_gen(parameters_dict, input_dim, output_dim, xy_test_gen, output_filepath, print_step)
 

@@ -51,13 +51,14 @@ def stopwatch(f):
 
 
 """
-##################################
-### HELPER CLASSES / FUNCTIONS ###
-##################################
+#########################
+### UTILITY FUNCTIONS ###
+#########################
 """
 
 
 def file_len(filename):
+    """Returns the number of lines in a file."""
     i = 0
     with open(filename) as f:
         for i, line in enumerate(f):
@@ -65,13 +66,12 @@ def file_len(filename):
     return i + 1
 
 
-def get_batch_generator(filename, batch_size, skip_header=False, repeat=0):
-    """Generator that gets the net batch of batch_size x or y values
+def get_batch_generator(filename, batch_size, repeat=0):
+    """Generator that sequentially gets batches of batch_size x or y values
     from the given file.
 
     :param filename: A string of the file to write to.
     :param batch_size: An int: the number of lines to include in each batch.
-    :param skip_header: If True, then skips the first line of the file.
     :param repeat: An int specifying the number of times to repeat going through
         the file. Repeat of 2 will return a generator that iterates through the
         full file three times before stopping iteration.
@@ -80,9 +80,6 @@ def get_batch_generator(filename, batch_size, skip_header=False, repeat=0):
     assert repeat < 1000, "Recursion depth will be exceeded."
     with open(filename, "rt") as file:
         reader = csv.reader(file)
-
-        # if skip_header:
-        #     next(reader)
 
         index = 0
         this_batch = []
@@ -100,7 +97,7 @@ def get_batch_generator(filename, batch_size, skip_header=False, repeat=0):
 
         print("Finished a batch iteration through %s" % filename)
         if repeat > 0:
-            for item in get_batch_generator(filename, batch_size, skip_header, repeat - 1):
+            for item in get_batch_generator(filename, batch_size, repeat - 1):
                 yield item
 
 
@@ -152,6 +149,13 @@ def merge_generators(gen_1, gen_2):
         yield x, y
 
 
+"""
+###################
+### TENSORBOARD ###
+###################
+"""
+
+
 def attach_variable_summaries(var, name, summ_list):
     """Attach statistical summaries to a tensor for tensorboard visualization."""
     with tf.name_scope("summaries"):
@@ -172,7 +176,17 @@ def attach_scalar_summary(var, name, summ_list):
     summ_list.append(summ)
 
 
+"""
+############################
+### TENSORFLOW UTILITIES ###
+############################
+"""
+
+
 def weight_variable(input_dim, output_dim, name=None, stretch_factor=1, dtype=tf.float32):
+    """Creates a weight variable with initial weights as recommended by Bengio.
+    Reference: http://arxiv.org/pdf/1206.5533v2.pdf. If sigmoid is used as the activation
+    function, then a stretch_factor of 4 is recommended."""
     limit = sqrt(6 / (input_dim + output_dim))
     initial = tf.random_uniform(shape=[input_dim, output_dim],
                                 minval=-(stretch_factor * limit),
@@ -182,7 +196,29 @@ def weight_variable(input_dim, output_dim, name=None, stretch_factor=1, dtype=tf
 
 
 def bias_variable(dim, initial_value=0.0, name=None, dtype=tf.float32):
+    """Creates a bias variable with an initial constant value."""
     return tf.Variable(tf.constant(value=initial_value, dtype=dtype, shape=[dim]), name=name)
+
+
+def corrupt(tensor, corruption_level=0.05):
+    """Uses the masking noise algorithm to mask corruption_level proportion
+    of the input.
+
+    :param tensor: A tensor whose values are to be corrupted.
+    :param corruption_level: An int [0, 1] specifying the probability to corrupt each value.
+    :return: The corrupted tensor.
+    """
+    total_samples = tf.reduce_prod(tf.shape(tensor))
+    corruption_matrix = tf.multinomial(tf.log([[corruption_level, 1 - corruption_level]]), total_samples)
+    corruption_matrix = tf.cast(tf.reshape(corruption_matrix, shape=tf.shape(tensor)), dtype=tf.float32)
+    return tf.mul(tensor, corruption_matrix)
+
+
+"""
+############################
+### NEURAL NETWORK LAYER ###
+############################
+"""
 
 
 class NNLayer:
@@ -204,18 +240,22 @@ class NNLayer:
         self.output_dim = output_dim
         self.name = name
         self.activation = activation
-        self.weights = weights
-        self.biases = biases
-        self._weights = None  # Weights Variable
-        self._biases = None  # Biases Variable
+        self.weights = weights      # Evaluated numpy array, static
+        self.biases = biases        # Evaluated numpy array, static
+        self._weights = None        # Weights Variable, dynamic
+        self._biases = None         # Biases Variable, dynamic
+
+    @property
+    def is_pretrained(self):
+        return self.weights is not None and self.biases is not None
 
     def set_wb(self, weights, biases):
         """Used during pre-training for convenience."""
-        self.weights = weights
-        self.biases = biases
+        self.weights = weights      # Evaluated numpy array
+        self.biases = biases        # Evaluated numpy array
 
-        print("Set weights of layer with shape", tf.shape(weights))
-        print("Set biases of layer with shape", tf.shape(weights))
+        print("Set weights of layer with shape", weights.shape)
+        print("Set biases of layer with shape", biases.shape)
 
     def set_wb_variables(self, summ_list):
         """This function is called at the beginning of supervised fine tuning to create new
@@ -242,10 +282,6 @@ class NNLayer:
 
     def get_bias_variable(self):
         return self._biases
-
-    @property
-    def is_pretrained(self):
-        return self.weights is not None and self.biases is not None
 
     def encode(self, input_tensor, use_variables=False):
         """Performs this layer's encoding on the input_tensor. use_variables is set to true
@@ -322,8 +358,8 @@ class SDAutoencoder:
         :param batch_size: The number of cases fed to the network in each batch from file.
         :param print_step: The number of batches processed before each print progress step.
         """
-        self.input_dim = dims[0]
-        self.output_dim = dims[-1]
+        self.input_dim = dims[0]  # The dimension of the raw input
+        self.output_dim = dims[-1]  # The output dimension of the last layer: fully encoded input
         self.hidden_layers = self.create_new_layers(dims, activations)
         self.sess = sess
 
@@ -344,6 +380,10 @@ class SDAutoencoder:
         """Returns whether the whole autoencoder network (all layers) is pre-trained."""
         return all([layer.is_pretrained for layer in self.hidden_layers])
 
+    ##########################
+    # VARIABLE CONFIGURATION #
+    ##########################
+
     def get_all_variables(self, additional_vars=None):
         """Returns all trainable variables of the neural network."""
         all_vars = []
@@ -363,19 +403,6 @@ class SDAutoencoder:
         for layer in self.hidden_layers:
             layer.update_wb(self.sess)
 
-    def corrupt(self, tensor, corruption_level=0.05):
-        """Uses the masking noise algorithm to mask corruption_level proportion
-        of the input.
-
-        :param tensor: A tensor whose values are to be corrupted.
-        :param corruption_level: An int [0, 1] specifying the probability to corrupt each value.
-        :return: The corrupted tensor.
-        """
-        total_samples = tf.reduce_prod(tf.shape(tensor))
-        corruption_matrix = tf.multinomial(tf.log([[corruption_level, 1 - corruption_level]]), total_samples)
-        corruption_matrix = tf.cast(tf.reshape(corruption_matrix, shape=tf.shape(tensor)), dtype=tf.float32)
-        return tf.mul(tensor, corruption_matrix)
-
     def save_variables(self, filepath):
         saver = tf.train.Saver()
         save_path = saver.save(self.sess, filepath)
@@ -393,7 +420,7 @@ class SDAutoencoder:
 
     @stopwatch
     def write_encoded_input(self, filepath, x_test_path):
-        x_test = get_batch_generator(x_test_path, self.batch_size, skip_header=True)
+        x_test = get_batch_generator(x_test_path, self.batch_size)
         self.write_encoded_input_gen(filepath, x_test_gen=x_test)
 
     @stopwatch
@@ -462,7 +489,7 @@ class SDAutoencoder:
             with tf.name_scope("x_values"):
                 x_original = tf.placeholder(tf.float32, shape=[None, self.input_dim])
                 x_latent = self.get_encoded_input(x_original, depth, use_variables=False)
-                x_corrupt = self.corrupt(x_latent, corruption_level=self.noise)
+                x_corrupt = corrupt(x_latent, corruption_level=self.noise)
 
             with tf.name_scope("encoding_vars"):
                 stretch_factor = 4 if self.loss == "sigmoid" else 1
@@ -564,15 +591,15 @@ class SDAutoencoder:
     def pretrain_network(self, x_train_path, epochs=1):
         print("Starting to pretrain autoencoder network.")
         for i in range(len(self.hidden_layers)):
-            # x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs-1)
+            # x_train = get_batch_generator(x_train_path, self.batch_size, repeat=epochs-1)
             x_train = get_random_batch_generator(self.batch_size, x_train_path, repeat=epochs-1)
             self.pretrain_layer(i, x_train)
         print("Finished pretraining of autoencoder network.")
 
     @stopwatch
     def finetune_parameters(self, x_train_path, y_train_path, output_dim, epochs=1):
-        # x_train = get_batch_generator(x_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
-        # y_train = get_batch_generator(y_train_path, self.batch_size, skip_header=True, repeat=epochs - 1)
+        # x_train = get_batch_generator(x_train_path, self.batch_size, repeat=epochs - 1)
+        # y_train = get_batch_generator(y_train_path, self.batch_size, repeat=epochs - 1)
         # xy_train = merge_generators(x_train, y_train)
         xy_train = get_random_batch_generator(self.batch_size, x_train_path, y_train_path, repeat=epochs - 1)
         return self.finetune_parameters_gen(xy_train_gen=xy_train, output_dim=output_dim)

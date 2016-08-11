@@ -2,8 +2,8 @@
 Example testing SDA model on MNIST digits.
 """
 
-from final_sda import get_batch_generator, SDAutoencoder
-from softmax import test_model_gen, test_model
+from final_sda import SDAutoencoder
+from softmax import test_model
 from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
 
